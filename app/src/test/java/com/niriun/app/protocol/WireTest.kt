@@ -51,6 +51,14 @@ class WireTest {
     }
 
     @Test
+    fun cameraUsageReportsWhetherAnAppHasTheVirtualCameraOpen() {
+        fun usage(version: Int, state: Int) = packet(MessageType.CAMERA_USAGE, { it.putInt(version); it.putInt(0); it.putInt(state) }, 16)
+        assertEquals(CameraUsage(2, 0, true), CameraUsage.parse(usage(2, 2)))
+        assertEquals(CameraUsage(2, 0, false), CameraUsage.parse(usage(2, 1)))
+        assertNull("the Android reference ignores word 1 <= 1", CameraUsage.parse(usage(1, 2)))
+    }
+
+    @Test
     fun sizesEncodesFlagsCountAndFloatFps() {
         val bytes = PacketBuilder.sizes(listOf(VideoMode(640, 480, 30), VideoMode(1920, 1080, 60)), microphone = true)
         val b = le(bytes)

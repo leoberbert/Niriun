@@ -592,6 +592,13 @@ private fun DetailsPanel(state: UiState) {
             Text(stringResource(if (copied) R.string.copied else R.string.copy))
         }
     }
+    state.pcCameraInUse?.let { inUse ->
+        Text(
+            stringResource(if (inUse) R.string.pc_camera_in_use else R.string.pc_camera_idle),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
     if (state.phase == Phase.STREAMING) {
         Text(
             stringResource(

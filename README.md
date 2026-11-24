@@ -12,7 +12,7 @@ Nenhum código ou asset do Iriun foi copiado: tudo aqui foi escrito do zero a pa
 
 | Área | Implementação |
 |---|---|
-| Descoberta | NSD `_iriunwebcam._tcp.` (4699), beacon UDP multicast de 280 B a cada 2 s (`239.255.188.58:23058` e `ff02::2:d644`), sonda TCP 4697 |
+| Descoberta | NSD `_iriunwebcam._tcp.` (4699), beacon UDP multicast de 280 B a cada 2 s (`239.255.188.58:4698` e `ff02::2:d644`), sonda TCP 4697 |
 | Transporte | `ControlServer`: TCP `[::]:4699`, 1 cliente, `TCP_NODELAY`, timeout ocioso de 10 s, watchdog de escrita de 4 s |
 | Vídeo | Camera2 → `GlRenderer` (OES → rotação/espelho/letterbox) → `MediaCodec` H.264/HEVC → pacote `0x08` |
 | Áudio | `AudioRecord` 48 kHz mono → encoder Opus da plataforma (20 ms) → pacote `0x07` |

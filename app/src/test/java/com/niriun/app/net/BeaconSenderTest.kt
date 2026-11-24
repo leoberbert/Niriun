@@ -25,6 +25,7 @@ class BeaconSenderTest {
         }
         assumeNotNull(nic)
 
+        assertEquals("engine.dll binds UDP 4698", 4698, Wire.BEACON_PORT)
         val hello = PacketBuilder.hello(ByteArray(16) { (it * 3).toByte() }, "Beacon test")
         val group = InetAddress.getByName(Wire.BEACON_GROUP_V4)
         val rx = MulticastSocket(null)

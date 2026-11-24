@@ -27,7 +27,7 @@ PC ─► pacote tipo 9 (ACK por quadro) ─► controle de fluxo (descarta quad
 | Mecanismo | Detalhe | Evidência |
 |---|---|---|
 | NSD / mDNS | `NsdManager.registerService`, tipo `_iriunwebcam._tcp.`, porta **4699**, nome = 32 hex (16 bytes do UUID persistido, hex dos bytes na ordem LE) | `LocalService.onCreate` (Java) |
-| Beacon UDP multicast | datagrama de **280 bytes** (o mesmo "hello", §4.1) enviado a cada ~2 s (20 × 100 ms) em **cada interface** ativa para `239.255.188.58:23058` (IPv4) e `ff02::2:d644` porta `23058` (IPv6). Só enquanto **não** há PC conectado (o objeto é destruído em `onConnect` `FUN_0012c580` e recriado em `onDisconnect` `FUN_0012ca94`) | `FUN_0012ac54` (loop), `FUN_0012ba84` (socket: SO_REUSEADDR/SO_REUSEPORT, bind `0.0.0.0:23058`, `IP_ADD_MEMBERSHIP`) |
+| Beacon UDP multicast | datagrama de **280 bytes** (o mesmo "hello", §4.1) enviado a cada ~2 s (20 × 100 ms) em **cada interface** ativa para `239.255.188.58:4698` (IPv4) e `ff02::2:d644` porta `4698` (IPv6). Só enquanto **não** há PC conectado (o objeto é destruído em `onConnect` `FUN_0012c580` e recriado em `onDisconnect` `FUN_0012ca94`) | `FUN_0012ac54` (loop), `FUN_0012ba84` (socket: SO_REUSEADDR/SO_REUSEPORT, bind `0.0.0.0:4698`, `IP_ADD_MEMBERSHIP`) |
 | Sonda TCP | segundo servidor TCP em **4697** (`0x1259`, `FUN_001291d0`) que, ao aceitar, envia o hello de 280 bytes (`FUN_0012944c`) e fecha após ~1 s ociosa | `FUN_001291d0`, `FUN_0012944c` |
 
 ## 3. Transporte TCP (porta 4699)
@@ -59,7 +59,7 @@ Prova: `*hdr = len & 0xFFFFFF | type << 24` (`FUN_00128800`, `FUN_0012d798`); le
 | Tipo | Nome | Layout (offsets em bytes, LE) |
 |---|---|---|
 | `0x01` | **Hello** (280 B) | `0` hdr `0x01000118`; `4` UUID (16 B = `LE64(least) ‖ LE64(most)`); `20` u16 = **2** (tipo de dispositivo: Android); `22` u16 = **2** (versão do protocolo); `24` nome do dispositivo, 256 B, NUL-preenchido |
-| `0x0A` | **Tamanhos** | `4` u32 flags (bit0 = há microfone; bit16 = flag booleana, sempre `false` nesta versão); `8` u32 `n`; `12` `n` × { i32 largura, i32 altura, **f32** fps } (12 B cada). Total = `12 + 12n`. O primeiro item é 640×480@30 (padrão do PC) |
+| `0x0A` | **Tamanhos** | `4` u32 flags (bit0 = há microfone; bit16..23 = **o celular aceita HEVC**; o app Android sempre envia 0, ver `docs/WINDOWS.md` §4); `8` u32 `n`; `12` `n` × { i32 largura, i32 altura, **f32** fps } (12 B cada). Total = `12 + 12n`. O primeiro item é 640×480@30 (padrão do PC) |
 | `0x18` | **Lista de câmeras** | `4` u32 `n`; `8` u32 índice selecionado; `12` `n` × 256 B (nome NUL-preenchido). Total = `12 + 256n` |
 | `0x17` | **Desafio de senha** | hdr `0x17000010` (16 B); `4` u32 0; `8` u64 nonce aleatório. Só enviado se há senha configurada |
 | `0x08` | **Vídeo** | `0` hdr (len = 8 + N); `4` **f32** timestamp em segundos desde o início do stream; `8` N bytes de saída crua do `MediaCodec` (inclui o buffer `CODEC_CONFIG` SPS/PPS/VPS, Annex-B). N ≤ 4 999 992 |
@@ -85,7 +85,7 @@ de câmeras. Quando câmera/tamanhos mudam em tempo de execução (`nativeSetSiz
 | `0x12` | Toque para focar | `4` f32 x∈[0,1]; `8` f32 y∈[0,1]; `12` u32 (len ≥ 13): 1 ⇒ liberar/voltar ao automático |
 | `0x17` | **Resposta de senha** | `8` u64 = `nonce XOR FNV1a64(senha)`; diferente ⇒ acesso negado |
 | `0x19` | Foco manual | `4` u32 flags (bit0 = manual); `8` f32 distância de foco (`LENS_FOCUS_DISTANCE`) |
-| `0x1A` | desconhecido | exige `u32[1] > 1`; chama um slot virtual sem efeito Java visível **[inferido]** |
+| `0x1A` | **Uso da câmera virtual** | `4` u32 versão (o celular ignora se ≤ 1); `8` u32 índice da câmera do PC (0–3); `12` u32 estado: **2 = algum aplicativo está com a câmera virtual aberta, 1 = ninguém** (engine.dll, ver `docs/WINDOWS.md` §3) |
 
 ### 4.3 Controle de câmera `0x10` (id → ação, vindo de `LocalService.d(int,int)`)
 
@@ -134,10 +134,10 @@ Estado nativo: `enviado` (`+0x4070`), `anterior` (`+0x406C`), `ack` (`+0x4074`, 
 
 ## 7. Incertezas conhecidas
 
-1. Significado exato do bit16 do campo flags de `0x0A` (o app sempre envia 0) e dos campos de `0x13–0x16`, `0x19` (celular→PC).
-2. Mensagem `0x1A` e o que o cliente PC faz com `0x10`/`0x19` vindos do celular.
-3. O que o PC envia enquanto ocioso para evitar o timeout de 10 s: só se sabe que qualquer mensagem reinicia o contador; o tipo `0x01` é o único tratado como no-op explícito (palpite: é o keep-alive).
-4. O cliente PC oficial **não** foi executado: a compatibilidade com o PC oficial é prevista pelo protocolo, mas não foi testada ao vivo.
+1. Os campos de `0x13–0x16`, `0x19` (celular→PC) continuam inferidos.
+2. O que o cliente PC faz com `0x10`/`0x19` vindos do celular.
+3. O PC não envia keep-alive ocioso (`docs/WINDOWS.md` §3); o timeout de 10 s é coberto pelo ACK por quadro e pelo tráfego do `0x0A`/`0x18`.
+4. O cliente PC oficial 2.9.9 foi testado ao vivo com o Niriun (vídeo, áudio, controles). Ver `docs/WINDOWS.md`.
 
 ## 8. Verificado dinamicamente (implementação Niriun, emulador Android 17 + `tools/pc-sim`)
 

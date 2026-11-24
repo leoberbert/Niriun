@@ -26,6 +26,8 @@ data class UiState(
     /** Saved OBS settings, mirrored here so the UI recomposes when they change. */
     val obsHost: String = "",
     val obsSource: String = "",
+    /** PC report (message 0x1A): is an application reading the virtual camera? null until the PC says. */
+    val pcCameraInUse: Boolean? = null,
 )
 
 /** Process-wide bridge between the foreground service and the UI. */

@@ -95,4 +95,6 @@
     <string name="live_start_text">Esta fonte do OBS já está AO VIVO. Iniciar agora coloca a câmera do celular na saída ao vivo.</string>
     <string name="live_start_sure_text">Os espectadores verão a câmera assim que iniciar. Confirme que é isso mesmo.</string>
     <string name="live_start_anyway">Iniciar mesmo assim</string>
+    <string name="pc_camera_in_use">Computador: um aplicativo está usando a câmera</string>
+    <string name="pc_camera_idle">Computador: nenhum aplicativo está usando a câmera</string>
 </resources>

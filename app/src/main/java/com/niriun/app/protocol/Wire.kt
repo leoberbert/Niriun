@@ -7,7 +7,11 @@ import java.nio.ByteOrder
 object Wire {
     const val TCP_PORT = 4699
     const val PROBE_PORT = 4697
-    const val BEACON_PORT = 23058
+    /**
+     * UDP discovery port. Ghidra shows the sockaddr constant `0x5A12` in the APK, which is the port already in
+     * network byte order (bytes 12 5A); the real port is 0x125A = 4698 (engine.dll binds UDP 0.0.0.0:4698).
+     */
+    const val BEACON_PORT = 4698
     const val BEACON_GROUP_V4 = "239.255.188.58"
     const val BEACON_GROUP_V6 = "ff02::2:d644"
     const val NSD_SERVICE_TYPE = "_iriunwebcam._tcp."
@@ -44,6 +48,7 @@ object MessageType {
     const val PEER_INFO = 0x11
     const val TOUCH = 0x12
     const val CAMERAS = 0x18
+    const val CAMERA_USAGE = 0x1A
     const val FOCUS = 0x19
 }
 
@@ -135,6 +140,20 @@ data class ManualFocus(val manual: Boolean, val distance: Float) {
         fun parse(p: Packet): ManualFocus? {
             if (p.type != MessageType.FOCUS || !p.has(0, 12)) return null
             return ManualFocus(manual = (p.u32(4) and 1) != 0, distance = p.f32(8))
+        }
+    }
+}
+
+/**
+ * Type 0x1A, sent by the PC after START and whenever it changes: [inUse] is true when an application has the virtual
+ * camera open (wire value 2; 1 means nobody does; engine.dll `FUN_10017940` + 1).
+ */
+data class CameraUsage(val version: Int, val camera: Int, val inUse: Boolean) {
+    companion object {
+        fun parse(p: Packet): CameraUsage? {
+            // The Android reference ignores the message unless word 1 is > 1.
+            if (p.type != MessageType.CAMERA_USAGE || !p.has(0, 16) || p.u32(4) <= 1) return null
+            return CameraUsage(p.u32(4), p.u32(8), p.u32(12) == 2)
         }
     }
 }

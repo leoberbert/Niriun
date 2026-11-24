@@ -95,4 +95,6 @@
     <string name="live_start_text">This OBS source is already ON AIR. Starting now puts the phone camera on the live output.</string>
     <string name="live_start_sure_text">Viewers will see the camera the moment it starts. Be sure this is what you want.</string>
     <string name="live_start_anyway">Start anyway</string>
+    <string name="pc_camera_in_use">Computer: an app is using the camera</string>
+    <string name="pc_camera_idle">Computer: no app is using the camera</string>
 </resources>

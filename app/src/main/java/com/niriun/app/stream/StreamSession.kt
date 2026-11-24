@@ -23,6 +23,7 @@ import com.niriun.app.protocol.ManualFocus
 import com.niriun.app.protocol.MessageType
 import com.niriun.app.protocol.Packet
 import com.niriun.app.protocol.PacketBuilder
+import com.niriun.app.protocol.CameraUsage
 import com.niriun.app.protocol.PeerInfo
 import com.niriun.app.protocol.StartRequest
 import com.niriun.app.protocol.Touch
@@ -258,7 +259,7 @@ class StreamSession(
         connected = false
         stopStreaming()
         if (broadcasting) beacon.start()
-        publish { it.copy(phase = if (broadcasting) Phase.WAITING else Phase.STOPPED, peer = null, streamInfo = null, audioActive = false, fps = 0f, kbps = 0) }
+        publish { it.copy(phase = if (broadcasting) Phase.WAITING else Phase.STOPPED, peer = null, streamInfo = null, audioActive = false, fps = 0f, kbps = 0, pcCameraInUse = null) }
     }
 
     private fun handlePacket(p: Packet) {
@@ -267,6 +268,7 @@ class StreamSession(
             // backwards (GraphicBufferSource then drops every frame), so only honour it while idle.
             MessageType.SYNC -> if (activeRequest == null) clock.reset()
             MessageType.PEER_INFO -> PeerInfo.parse(p)
+            MessageType.CAMERA_USAGE -> CameraUsage.parse(p)?.let { usage -> publish { it.copy(pcCameraInUse = usage.inUse) } }
             MessageType.START -> StartRequest.parse(p)?.let(::handleStart)
             MessageType.CONTROL -> Control.parse(p)?.let(::handleControl)
             MessageType.TOUCH -> Touch.parse(p)?.let { camera.tapToFocus(it.x, it.y, it.release) }
