@@ -56,3 +56,12 @@ Iriun no PC não está no teste do Niriun, e o Iriun do PC chegou a ficar aberto
 | 1080p30 | 29,9, 55, 20,2 ms (máx 39), 80% | 30,0, 61, **5,9 ms, 18%** (1 pausa de 105 ms) |
 | 1080p60 | **42,0**, **122** (17 pausas > 100 ms), 21 ms, 99% | **59,6**, **35**, 0 pausas > 100 ms, **4,9 ms, 30%** |
 A banda do NDI não mudou (~110 Mbit/s por receptor em 720p; NIC total 229 Mbit/s em 1080p30 e 291 Mbit/s em 1080p60).
+
+## Niriun 1080p60 corrigido (24/11)
+Causa: com `fps > 30` o app escolhia a primeira faixa de AE com máximo 60, que no S25 Ultra é a variável `[15,60]`; o AE a derrubava
+para ~30 fps. A câmera traseira também oferece `[60,60]`, e agora ela é preferida (`CameraPipeline`).
+| Modo | fps | intervalo p50 / p99 / máx (ms) | Rede |
+|---|---|---|---|
+| Niriun 1080p60 antes | 28,7 | 33 / 54 / 67 | 12,2 Mbit/s |
+| Niriun 1080p60 depois | **57,1** | **16,6 / 32 / 46** | 10,7 Mbit/s |
+(Uma segunda rodada em 1080p30 não pôde ser medida porque o cliente Iriun do PC se reconectou ao celular.)

@@ -346,9 +346,13 @@ class CameraPipeline(
                 if (range != null && step.toFloat() > 0f) {
                     b.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, (evStops / step.toFloat()).roundToInt().coerceIn(range.lower, range.upper))
                 }
+                // AE may lower the frame rate in dim light when the range is variable (e.g. [15,60] or [30,60]).
+                // Prefer a range that ends at the requested rate and starts as high as possible ([60,60] if offered).
                 if (fps > 30) {
                     c.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES)
-                        ?.filter { it.upper >= fps }?.minByOrNull { it.upper - fps }
+                        ?.filter { it.upper >= fps }
+                        ?.sortedWith(compareBy({ it.upper - fps }, { fps - it.lower }))
+                        ?.firstOrNull()
                         ?.let { b.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, it) }
                 }
             }
