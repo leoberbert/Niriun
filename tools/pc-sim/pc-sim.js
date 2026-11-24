@@ -49,6 +49,8 @@ function fnv1a64(text) {
 }
 
 const stats = { video: 0, videoBytes: 0, audio: 0, audioBytes: 0, config: 0, keyframes: 0, firstTs: null, lastTs: null };
+const gaps = [];
+let lastArrival = null;
 const out = fs.createWriteStream(outPath);
 let pending = Buffer.alloc(0);
 let started = false;
@@ -133,6 +135,11 @@ function handle(type, data) {
       const ts = data.readFloatLE(4);
       const payload = data.subarray(8);
       stats.video++;
+      {
+        const now = process.hrtime.bigint();
+        if (lastArrival !== null) gaps.push(Number(now - lastArrival) / 1e6);
+        lastArrival = now;
+      }
       stats.videoBytes += payload.length;
       if (stats.firstTs === null) stats.firstTs = ts;
       stats.lastTs = ts;
@@ -210,5 +217,12 @@ function finish() {
   clearInterval(keepAlive);
   out.end();
   const dur = stats.lastTs !== null ? stats.lastTs - stats.firstTs : 0;
-  console.log(JSON.stringify({ ...stats, durationSeconds: Number(dur.toFixed(2)), avgFps: dur > 0 ? Number((stats.video / dur).toFixed(1)) : 0, kbps: dur > 0 ? Math.round((stats.videoBytes * 8) / dur / 1000) : 0 }, null, 2));
+  gaps.sort((a, b) => a - b);
+  const pct = (p) => (gaps.length ? gaps[Math.min(gaps.length - 1, Math.floor(gaps.length * p))] : 0);
+  const gapStats = {
+    p50: Number(pct(0.5).toFixed(1)), p95: Number(pct(0.95).toFixed(1)), p99: Number(pct(0.99).toFixed(1)),
+    max: Number((gaps[gaps.length - 1] || 0).toFixed(1)),
+    over100: gaps.filter((g) => g > 100).length, over200: gaps.filter((g) => g > 200).length, over500: gaps.filter((g) => g > 500).length,
+  };
+  console.log(JSON.stringify({ ...stats, durationSeconds: Number(dur.toFixed(2)), avgFps: dur > 0 ? Number((stats.video / dur).toFixed(1)) : 0, kbps: dur > 0 ? Math.round((stats.videoBytes * 8) / dur / 1000) : 0, arrivalGapMs: gapStats }, null, 2));
 }

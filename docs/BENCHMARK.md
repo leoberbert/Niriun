@@ -30,3 +30,21 @@ Repita com carga: um download grande no mesmo Wi-Fi e depois afastando o celular
 * **Niriun**: tela Detalhes mostra fps e kbps. `adb shell dumpsys gfxinfo`/`top -H` para CPU por thread em ambos.
 * Ambos: `adb shell dumpsys batterystats` e temperatura (`adb shell dumpsys battery`) após 10 min.
 * Banda: no PC, `typeperf "\Network Interface(*)\Bytes Received/sec"` durante o teste.
+
+## Resultados medidos (24/11, Samsung SM-S938B, câmera traseira, cena quase parada)
+Receptor: PC por Ethernet, celular por Wi-Fi 5 GHz, mesmo roteador. DroidNDI: build `bench/instrumentation` (release, id `.bench`) com
+`tools` próprio de receptor NDI; Niriun: release 0.1.1 + `tools/pc-sim/pc-sim.js` (confirma cada quadro, não decodifica).
+Havia 2 receptores NDI ligados no DroidNDI (OBS do usuário + o de teste).
+
+| Modo | fps recebido | intervalo entre quadros p50 / p99 / máx (ms) | Rede | CPU do celular por quadro |
+|---|---|---|---|---|
+| DroidNDI 720p30 | 30,0 | 32 / 63 / 76 | ~110 Mbit/s por receptor (NIC total 224 com 2 receptores, 720p60) | conversão 10,7 ms, envio 5,9 ms: thread 50% ocupada |
+| DroidNDI 720p60 | 59,5 | 16,6 / 29,5 / 45 | idem | conversão 8,7 ms, envio 3,4 ms: **72%** |
+| DroidNDI 1080p30 | 29,9 | 32 / 55 / 65 | NIC total 227 Mbit/s | conversão **20,2 ms (máx 39)**, envio 6,2 ms: **80%** |
+| DroidNDI 1080p60 | **42,0** | 23 / **122** / 161 (17 pausas > 100 ms) | NIC total 200 Mbit/s | conversão 21 ms, thread **99% ocupada**: não sustenta 60 fps |
+| Niriun 720p30 | 29,8 | 33 / 48 / 66 | **4,1 Mbit/s** | codificação por hardware |
+| Niriun 1080p30 | 29,1 | 33 / 59 / 80 | **7,1 Mbit/s** | idem |
+| Niriun 1080p60 pedido | **28,7** | 33 / 54 / 67 | 12,2 Mbit/s | o app entregou ~29 fps: pendência a investigar |
+
+Limites da medição: cena parada (movimento aumenta o tamanho dos quadros), atraso vidro a vidro **não medido**, a decodificação do
+Iriun no PC não está no teste do Niriun, e o Iriun do PC chegou a ficar aberto durante os testes do DroidNDI.
