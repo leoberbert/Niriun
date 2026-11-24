@@ -48,3 +48,11 @@ Havia 2 receptores NDI ligados no DroidNDI (OBS do usuário + o de teste).
 
 Limites da medição: cena parada (movimento aumenta o tamanho dos quadros), atraso vidro a vidro **não medido**, a decodificação do
 Iriun no PC não está no teste do Niriun, e o Iriun do PC chegou a ficar aberto durante os testes do DroidNDI.
+
+## DroidNDI depois da conversão rápida + envio assíncrono (mesma bancada, 24/11)
+| Modo | Antes: fps, p99 de intervalo (ms), conversão, thread ocupada | Depois |
+|---|---|---|
+| 720p30 | 30,0, 63, 10,7 ms, 50% | 29,9, 59, **3,1 ms, 9%** |
+| 1080p30 | 29,9, 55, 20,2 ms (máx 39), 80% | 30,0, 61, **5,9 ms, 18%** (1 pausa de 105 ms) |
+| 1080p60 | **42,0**, **122** (17 pausas > 100 ms), 21 ms, 99% | **59,6**, **35**, 0 pausas > 100 ms, **4,9 ms, 30%** |
+A banda do NDI não mudou (~110 Mbit/s por receptor em 720p; NIC total 229 Mbit/s em 1080p30 e 291 Mbit/s em 1080p60).
