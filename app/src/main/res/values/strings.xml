@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Niriun</string>
+    <string name="notification_channel">Streaming</string>
+    <string name="notification_waiting">Waiting for the computer</string>
+    <string name="notification_connected">Connected to the computer</string>
+    <string name="notification_streaming">Streaming to the computer</string>
+    <string name="stop">Stop</string>
+    <string name="start">Start</string>
+    <string name="cancel">Cancel</string>
+
+    <string name="status_stopped">Stopped</string>
+    <string name="status_waiting">Waiting for the computer</string>
+    <string name="status_connected">Connected</string>
+    <string name="status_streaming">Sending video</string>
+
+    <string name="welcome_title">Your phone as a wireless webcam</string>
+    <string name="welcome_subtitle">Send camera and microphone to your computer over Wi-Fi or USB tethering. No account, no cloud.</string>
+    <string name="welcome_step1_title">Open the computer app</string>
+    <string name="welcome_step1_detail">Run the Iriun Webcam desktop app on the same Wi-Fi network as this phone.</string>
+    <string name="welcome_step2_title">Pick this phone</string>
+    <string name="welcome_step2_detail">It shows up automatically. If not, type the address shown in Details.</string>
+    <string name="welcome_step3_title">Use it as a camera</string>
+    <string name="welcome_step3_detail">Choose it in your video-call or recording app. The picture follows how you hold the phone.</string>
+    <string name="welcome_privacy">Video and audio only travel to computers on your local network.</string>
+    <string name="welcome_allow_and_start">Allow and start</string>
+
+    <string name="permission_title">Permissions needed</string>
+    <string name="permission_body">Niriun needs the camera to send video and, on Android 17+, local network access so your computer can find this phone. The microphone (audio) and notifications (status) are optional.</string>
+    <string name="permission_grant">Grant permissions</string>
+    <string name="permission_open_settings">Open app permissions</string>
+
+    <string name="details">Details</string>
+    <string name="settings">Settings</string>
+    <string name="zoom_value">Zoom %1$d%%</string>
+    <string name="zoom_hint">Pinch the picture or drag the slider.</string>
+    <string name="zoom_reset">Reset</string>
+    <string name="fullscreen">Hide controls</string>
+    <string name="show_controls">Show controls</string>
+
+    <string name="stop_title">Stop broadcasting?</string>
+    <string name="stop_text">The computer will lose the camera until you start again.</string>
+
+    <string name="details_device">This phone</string>
+    <string name="details_addresses">Addresses</string>
+    <string name="copy">Copy</string>
+    <string name="copied">Copied</string>
+    <string name="connect_port">%1$s : %2$d</string>
+    <string name="no_network">No network address found</string>
+    <string name="stream_stats">%1$.0f fps · %2$d kbps</string>
+    <string name="audio_on">Microphone is being sent</string>
+    <string name="audio_unavailable">Microphone not available on this device</string>
+
+    <string name="camera_title">Camera</string>
+    <string name="torch">Torch</string>
+    <string name="mirror">Mirror image</string>
+
+    <string name="tally_program">ON AIR</string>
+    <string name="tally_preview">PREVIEW</string>
+    <string name="tally_on_air_for">On air %1$s</string>
+    <string name="obs_title">OBS tally</string>
+    <string name="obs_host">Computer address (IP)</string>
+    <string name="obs_port">Port</string>
+    <string name="obs_password">Password</string>
+    <string name="obs_connecting">Connecting to OBS…</string>
+    <string name="obs_connected">Connected to OBS</string>
+    <string name="obs_unreachable">Cannot reach OBS</string>
+    <string name="obs_source_missing">No source named \"%1$s\" in OBS. Pick one from the list.</string>
+    <string name="obs_edit">Edit</string>
+    <string name="save">Save</string>
+    <string name="notification_paused">Camera on, not broadcasting</string>
+    <string name="obs_intro">Optional. Shows on the phone when this camera is on air or in preview in OBS.</string>
+    <string name="obs_step_enable">In OBS: Tools, WebSocket Server Settings, turn on the server. Then enter this computer\'s address.</string>
+    <string name="obs_connect">Connect</string>
+    <string name="obs_disconnect">Disconnect</string>
+    <string name="obs_change_source">Change source</string>
+    <string name="obs_source_label">Source: %1$s</string>
+    <string name="obs_choose_source">Which OBS source carries this phone\'s camera?</string>
+    <string name="obs_no_sources">No camera source found in OBS yet.</string>
+    <string name="obs_not_listed">Not in the list?</string>
+    <string name="obs_create">Create source in OBS</string>
+    <string name="obs_creating">Creating…</string>
+    <string name="obs_created_manual">Source \"%1$s\" created. In OBS, open its properties and choose the Iriun Webcam device.</string>
+    <string name="obs_create_failed">Could not create it: %1$s</string>
+    <string name="obs_manual_toggle">How to create it by hand</string>
+    <string name="obs_manual_steps">1. In OBS, select the scene you want.\n2. Under Sources press +, choose Video Capture Device.\n3. In Device pick Iriun Webcam, then OK.\n4. Come back here and choose the new source.</string>
+    <string name="obs_use_password">OBS uses a password</string>
+    <string name="live_title">You are ON AIR</string>
+    <string name="live_continue">Continue</string>
+    <string name="live_stop_text">OBS is showing this phone on the program right now. Stopping removes the camera from the live output.</string>
+    <string name="live_sure_title">Are you sure?</string>
+    <string name="live_sure_text">The audience will lose the picture immediately. Only stop if you are certain.</string>
+    <string name="live_stop_anyway">Stop anyway</string>
+    <string name="live_action_text">This changes what viewers are seeing right now.</string>
+    <string name="live_start_text">This OBS source is already ON AIR. Starting now puts the phone camera on the live output.</string>
+    <string name="live_start_sure_text">Viewers will see the camera the moment it starts. Be sure this is what you want.</string>
+    <string name="live_start_anyway">Start anyway</string>
+</resources>

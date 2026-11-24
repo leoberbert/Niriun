@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Niriun</string>
+    <string name="notification_channel">Transmissão</string>
+    <string name="notification_waiting">Aguardando o computador</string>
+    <string name="notification_connected">Conectado ao computador</string>
+    <string name="notification_streaming">Transmitindo para o computador</string>
+    <string name="stop">Parar</string>
+    <string name="start">Iniciar</string>
+    <string name="cancel">Cancelar</string>
+
+    <string name="status_stopped">Parado</string>
+    <string name="status_waiting">Aguardando o computador</string>
+    <string name="status_connected">Conectado</string>
+    <string name="status_streaming">Enviando vídeo</string>
+
+    <string name="welcome_title">Seu celular como webcam sem fio</string>
+    <string name="welcome_subtitle">Envie câmera e microfone para o computador por Wi-Fi ou USB tethering. Sem conta, sem nuvem.</string>
+    <string name="welcome_step1_title">Abra o app no computador</string>
+    <string name="welcome_step1_detail">Execute o Iriun Webcam do computador na mesma rede Wi-Fi deste celular.</string>
+    <string name="welcome_step2_title">Escolha este celular</string>
+    <string name="welcome_step2_detail">Ele aparece sozinho. Se não aparecer, digite o endereço mostrado em Detalhes.</string>
+    <string name="welcome_step3_title">Use como câmera</string>
+    <string name="welcome_step3_detail">Escolha-o no app de chamada ou gravação. A imagem acompanha a posição do celular.</string>
+    <string name="welcome_privacy">Vídeo e áudio só vão para computadores da sua rede local.</string>
+    <string name="welcome_allow_and_start">Permitir e iniciar</string>
+
+    <string name="permission_title">Permissões necessárias</string>
+    <string name="permission_body">O Niriun precisa da câmera para enviar vídeo e, no Android 17+, do acesso à rede local para o computador encontrar este celular. O microfone (áudio) e as notificações (status) são opcionais.</string>
+    <string name="permission_grant">Conceder permissões</string>
+    <string name="permission_open_settings">Abrir permissões do app</string>
+
+    <string name="details">Detalhes</string>
+    <string name="settings">Configurações</string>
+    <string name="zoom_value">Zoom %1$d%%</string>
+    <string name="zoom_hint">Use pinça na imagem ou arraste o controle.</string>
+    <string name="zoom_reset">Redefinir</string>
+    <string name="fullscreen">Ocultar controles</string>
+    <string name="show_controls">Mostrar controles</string>
+
+    <string name="stop_title">Parar a transmissão?</string>
+    <string name="stop_text">O computador perde a câmera até você iniciar de novo.</string>
+
+    <string name="details_device">Este celular</string>
+    <string name="details_addresses">Endereços</string>
+    <string name="copy">Copiar</string>
+    <string name="copied">Copiado</string>
+    <string name="connect_port">%1$s : %2$d</string>
+    <string name="no_network">Nenhum endereço de rede encontrado</string>
+    <string name="stream_stats">%1$.0f fps · %2$d kbps</string>
+    <string name="audio_on">O microfone está sendo enviado</string>
+    <string name="audio_unavailable">Microfone indisponível neste aparelho</string>
+
+    <string name="camera_title">Câmera</string>
+    <string name="torch">Lanterna</string>
+    <string name="mirror">Espelhar imagem</string>
+
+    <string name="tally_program">AO VIVO</string>
+    <string name="tally_preview">PREVIEW</string>
+    <string name="tally_on_air_for">No ar há %1$s</string>
+    <string name="obs_title">Tally do OBS</string>
+    <string name="obs_host">Endereço do computador (IP)</string>
+    <string name="obs_port">Porta</string>
+    <string name="obs_password">Senha</string>
+    <string name="obs_connecting">Conectando ao OBS…</string>
+    <string name="obs_connected">Conectado ao OBS</string>
+    <string name="obs_unreachable">Não foi possível alcançar o OBS</string>
+    <string name="obs_source_missing">Não existe fonte chamada \"%1$s\" no OBS. Escolha uma da lista.</string>
+    <string name="obs_edit">Editar</string>
+    <string name="save">Salvar</string>
+    <string name="notification_paused">Câmera ligada, sem transmitir</string>
+    <string name="obs_intro">Opcional. Mostra no celular quando esta câmera está ao vivo ou no preview do OBS.</string>
+    <string name="obs_step_enable">No OBS: Ferramentas, Configurações do servidor WebSocket, ative o servidor. Depois informe o endereço deste computador.</string>
+    <string name="obs_connect">Conectar</string>
+    <string name="obs_disconnect">Desconectar</string>
+    <string name="obs_change_source">Trocar fonte</string>
+    <string name="obs_source_label">Fonte: %1$s</string>
+    <string name="obs_choose_source">Qual fonte do OBS traz a câmera deste celular?</string>
+    <string name="obs_no_sources">Ainda não há fonte de câmera no OBS.</string>
+    <string name="obs_not_listed">Não está na lista?</string>
+    <string name="obs_create">Criar fonte no OBS</string>
+    <string name="obs_creating">Criando…</string>
+    <string name="obs_created_manual">Fonte \"%1$s\" criada. No OBS, abra as propriedades dela e escolha o dispositivo Iriun Webcam.</string>
+    <string name="obs_create_failed">Não foi possível criar: %1$s</string>
+    <string name="obs_manual_toggle">Como criar manualmente</string>
+    <string name="obs_manual_steps">1. No OBS, selecione a cena desejada.\n2. Em Fontes, clique em + e escolha Dispositivo de captura de vídeo.\n3. Em Dispositivo, escolha Iriun Webcam e confirme.\n4. Volte aqui e escolha a nova fonte.</string>
+    <string name="obs_use_password">O OBS usa senha</string>
+    <string name="live_title">Você está AO VIVO</string>
+    <string name="live_continue">Continuar</string>
+    <string name="live_stop_text">O OBS está mostrando este celular no programa agora. Parar tira a câmera da saída ao vivo.</string>
+    <string name="live_sure_title">Tem certeza?</string>
+    <string name="live_sure_text">O público perde a imagem imediatamente. Só pare se tiver certeza.</string>
+    <string name="live_stop_anyway">Parar mesmo assim</string>
+    <string name="live_action_text">Isso muda o que os espectadores estão vendo agora.</string>
+    <string name="live_start_text">Esta fonte do OBS já está AO VIVO. Iniciar agora coloca a câmera do celular na saída ao vivo.</string>
+    <string name="live_start_sure_text">Os espectadores verão a câmera assim que iniciar. Confirme que é isso mesmo.</string>
+    <string name="live_start_anyway">Iniciar mesmo assim</string>
+</resources>
