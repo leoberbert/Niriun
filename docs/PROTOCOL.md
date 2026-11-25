@@ -86,6 +86,7 @@ de câmeras. Quando câmera/tamanhos mudam em tempo de execução (`nativeSetSiz
 | `0x17` | **Resposta de senha** | `8` u64 = `nonce XOR FNV1a64(senha)`; diferente ⇒ acesso negado |
 | `0x19` | Foco manual | `4` u32 flags (bit0 = manual); `8` f32 distância de foco (`LENS_FOCUS_DISTANCE`) |
 | `0x1A` | **Uso da câmera virtual** | `4` u32 versão (o celular ignora se ≤ 1); `8` u32 índice da câmera do PC (0–3); `12` u32 estado: **2 = algum aplicativo está com a câmera virtual aberta, 1 = ninguém** (engine.dll, ver `docs/WINDOWS.md` §3) |
+| `0x30` | **Tally (extensão Niriun)** | `4` u32 estado (0 = desligado, 1 = preview, 2 = programa); `8` nome da fonte opcional, 256 B NUL-preenchido. Não existe no Iriun original; ver §4.5 |
 
 ### 4.3 Controle de câmera `0x10` (id → ação, vindo de `LocalService.d(int,int)`)
 
@@ -110,6 +111,22 @@ de câmeras. Quando câmera/tamanhos mudam em tempo de execução (`nativeSetSiz
   (`FUN_0012de2c`). Sem senha o desafio nem é enviado.
 * No `accept` o celular gera `nonce` (mt19937 semeado por `/dev/urandom`) e envia `0x17`.
 * O PC responde `0x17` com `nonce XOR hash`. `(nonce ^ hash) != resposta` ⇒ `0x0B` é recusado ("Access denied").
+
+### 4.5 Extensão Niriun: tally (0x30)
+
+**Não faz parte do protocolo original do Iriun** (o Iriun não usa o tipo `0x30`; o app original ignoraria o pacote). É uma
+extensão do Niriun: o plugin Niriun para OBS Studio (cliente do PC) informa ao celular, pelo próprio canal de controle,
+se a fonte está no programa ou no preview do OBS.
+
+| Offset | Campo |
+|---|---|
+| `0` | cabeçalho u32 LE = `(tamanhoTotal & 0xFFFFFF) \| (0x30 << 24)` |
+| `4` | u32 estado: `0` = desligado (fora do programa e do preview), `1` = preview, `2` = programa |
+| `8` | **opcional**: nome da fonte do OBS, UTF-8 NUL-preenchido em um campo de 256 B (total = 264). Um pacote de exatamente 8 B (sem nome) também é aceito |
+
+* O plugin envia logo após o `START` e a cada mudança enquanto conectado. O celular nunca responde.
+* Estado desconhecido (> 2) ⇒ o pacote é ignorado. O nome serve só para exibição ("AO VIVO · Camera 1").
+* Ao desconectar, o celular volta o tally para desligado (sem PC o estado é desconhecido).
 
 ## 5. Controle de fluxo (ACK)
 

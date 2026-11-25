@@ -21,13 +21,13 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -39,22 +39,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalIconToggleButton
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -65,7 +60,6 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -78,8 +72,6 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -89,9 +81,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.niriun.app.R
-import com.niriun.app.obs.CreateResult
-import com.niriun.app.obs.ObsConnection
-import com.niriun.app.obs.Tally
+import com.niriun.app.protocol.Tally
 import com.niriun.app.protocol.Wire
 import com.niriun.app.stream.NiriunRuntime
 import com.niriun.app.stream.Phase
@@ -102,11 +92,14 @@ import java.net.Inet4Address
 import java.net.NetworkInterface
 import kotlinx.coroutines.delay
 
-private enum class Tool { NONE, ZOOM, DETAILS, SETTINGS }
+private enum class Tool { NONE, ZOOM, DETAILS }
 
 /** Runtime permission introduced with Android 17 (API 37) for local-network access. */
 private const val LOCAL_NETWORK_PERMISSION = "android.permission.ACCESS_LOCAL_NETWORK"
 private const val LOCAL_NETWORK_API = 37
+
+/** Zoom ratio that the 0-100 % pinch scale spans (1x to 10x). */
+private const val PINCH_RANGE = 10.0
 
 @Composable
 fun MainScreen() {
@@ -148,12 +141,12 @@ fun MainScreen() {
             requestPermissions()
         })
     } else {
-        LiveScreen(settings = settings, permissionsReady = ready, onRequestPermissions = requestPermissions)
+        LiveScreen(permissionsReady = ready, onRequestPermissions = requestPermissions)
     }
 }
 
 @Composable
-private fun LiveScreen(settings: Settings, permissionsReady: Boolean, onRequestPermissions: () -> Unit) {
+private fun LiveScreen(permissionsReady: Boolean, onRequestPermissions: () -> Unit) {
     val context = LocalContext.current
     val state by NiriunRuntime.state.collectAsStateWithLifecycle()
     val phase = state.phase
@@ -164,17 +157,17 @@ private fun LiveScreen(settings: Settings, permissionsReady: Boolean, onRequestP
     var expanded by remember { mutableStateOf(true) }
     var interaction by remember { mutableLongStateOf(0L) }
     var confirmStop by remember { mutableStateOf(false) }
+    var supportOpen by remember { mutableStateOf(false) }
+    var settingsOpen by remember { mutableStateOf(false) }
     var confirmStopAgain by remember { mutableStateOf(false) }
-    var confirmStart by remember { mutableStateOf(false) }
-    var confirmStartAgain by remember { mutableStateOf(false) }
     // Actions that change the picture are held back for confirmation while this phone is ON AIR in OBS.
     var guarded by remember { mutableStateOf<(() -> Unit)?>(null) }
     var zoom by remember(state.selectedCamera) { mutableFloatStateOf(0f) }
 
     // Controls fade out while streaming so the picture is clean; tapping brings them back.
-    val showControls = expanded || !streaming
-    LaunchedEffect(streaming, expanded, tool, interaction) {
-        if (streaming && expanded && tool == Tool.NONE) {
+    val showControls = expanded || !permissionsReady
+    LaunchedEffect(streaming, expanded, tool, interaction, settingsOpen) {
+        if (streaming && expanded && tool == Tool.NONE && !settingsOpen) {
             delay(5000)
             expanded = false
         }
@@ -190,8 +183,27 @@ private fun LiveScreen(settings: Settings, permissionsReady: Boolean, onRequestP
         onDispose { view.keepScreenOn = false }
     }
 
-    // Tally from OBS: haptic pulse and a running clock when this phone's source goes to Program.
-    val tally = state.obs.tally
+    // Time since the picture started flowing, shown in the top bar like DroidNDI's live summary.
+    var liveSince by remember { mutableLongStateOf(0L) }
+    var liveNow by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(streaming) {
+        if (streaming) {
+            liveSince = SystemClock.elapsedRealtime()
+            while (true) {
+                liveNow = SystemClock.elapsedRealtime()
+                delay(1000)
+            }
+        }
+    }
+    val liveText = if (streaming) {
+        val s = ((liveNow - liveSince) / 1000).coerceAtLeast(0)
+        if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%02d:%02d".format(s / 60, s % 60)
+    } else {
+        null
+    }
+
+    // Tally from the PC (OBS plugin): haptic pulse and a running clock when this phone's source goes to Program.
+    val tally = state.tally
     var nowMs by remember { mutableLongStateOf(0L) }
     var onAirSince by remember { mutableLongStateOf(0L) }
     LaunchedEffect(tally) {
@@ -237,14 +249,17 @@ private fun LiveScreen(settings: Settings, permissionsReady: Boolean, onRequestP
                         .fillMaxSize()
                         .pointerInput(Unit) {
                             detectTapGestures {
-                                expanded = !expanded || !streaming
+                                expanded = true
                                 interaction = android.os.SystemClock.uptimeMillis()
                             }
                         }
                         .pointerInput(Unit) {
                             detectTransformGestures { _, _, scale, _ ->
                                 if (scale != 1f) {
-                                    zoom = (zoom + (scale - 1f) * 100f).coerceIn(0f, 100f)
+                                    // Multiplicative like DroidNDI: the same finger spread gives the same zoom ratio at any level.
+                                    // The 0-100 % scale is logarithmic between 1x and 10x.
+                                    val factor = Math.pow(PINCH_RANGE, zoom / 100.0) * scale
+                                    zoom = (Math.log(factor) / Math.log(PINCH_RANGE) * 100.0).toFloat().coerceIn(0f, 100f)
                                     NiriunRuntime.setZoom(zoom.toInt())
                                     expanded = true
                                     tool = Tool.ZOOM
@@ -275,7 +290,7 @@ private fun LiveScreen(settings: Settings, permissionsReady: Boolean, onRequestP
                             else Modifier.size(12.dp).border(2.5.dp, tallyColor, CircleShape),
                         )
                         Text(
-                            stringResource(if (tally == Tally.PROGRAM) R.string.tally_program else R.string.tally_preview),
+                            tallyLabel(tally),
                             color = tallyColor,
                             style = MaterialTheme.typography.labelLarge,
                         )
@@ -288,9 +303,12 @@ private fun LiveScreen(settings: Settings, permissionsReady: Boolean, onRequestP
                     state = state,
                     tally = tally,
                     onAir = onAirText,
+                    live = liveText,
                     modifier = Modifier.align(Alignment.TopCenter).safeDrawingPadding().padding(8.dp).fillMaxWidth(),
                     onDetails = { tool = if (tool == Tool.DETAILS) Tool.NONE else Tool.DETAILS },
-                    onHide = if (streaming) ({ expanded = false }) else null,
+                    // Low-key support entry, like DroidNDI: only while no picture is being sent.
+                    onSupport = if (!streaming) ({ supportOpen = true }) else null,
+                    onHide = if (permissionsReady) ({ expanded = false }) else null,
                 )
                 Surface(
                     Modifier
@@ -316,9 +334,6 @@ private fun LiveScreen(settings: Settings, permissionsReady: Boolean, onRequestP
                                 interaction = android.os.SystemClock.uptimeMillis()
                             }
                             Tool.DETAILS -> DetailsPanel(state)
-                            Tool.SETTINGS -> SettingsPanel(state, settings) { action ->
-                                if (tally == Tally.PROGRAM) guarded = action else action()
-                            }
                             Tool.NONE -> Unit
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -328,13 +343,13 @@ private fun LiveScreen(settings: Settings, permissionsReady: Boolean, onRequestP
                             ToolButton(R.drawable.ic_info, stringResource(R.string.details), tool == Tool.DETAILS) {
                                 tool = if (tool == Tool.DETAILS) Tool.NONE else Tool.DETAILS
                             }
-                            ToolButton(R.drawable.ic_settings, stringResource(R.string.settings), tool == Tool.SETTINGS) {
-                                tool = if (tool == Tool.SETTINGS) Tool.NONE else Tool.SETTINGS
+                            ToolButton(R.drawable.ic_settings, stringResource(R.string.settings), settingsOpen) {
+                                settingsOpen = true
                             }
                             Spacer(Modifier.weight(1f))
                             BroadcastButton(running, enabled = permissionsReady) {
                                 when {
-                    !running -> if (tally == Tally.PROGRAM) confirmStart = true else startBroadcast(context)
+                                    !running -> startBroadcast(context)
                                     streaming || tally == Tally.PROGRAM -> confirmStop = true
                                     else -> NiriunRuntime.setBroadcasting(false)
                                 }
@@ -375,34 +390,6 @@ private fun LiveScreen(settings: Settings, permissionsReady: Boolean, onRequestP
             dismissButton = { TextButton(onClick = { confirmStopAgain = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
-    if (confirmStart) {
-        AlertDialog(
-            onDismissRequest = { confirmStart = false },
-            title = { Text(stringResource(R.string.live_title)) },
-            text = { Text(stringResource(R.string.live_start_text)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    confirmStart = false
-                    confirmStartAgain = true
-                }) { Text(stringResource(R.string.live_continue), color = MaterialTheme.colorScheme.error) }
-            },
-            dismissButton = { TextButton(onClick = { confirmStart = false }) { Text(stringResource(R.string.cancel)) } },
-        )
-    }
-    if (confirmStartAgain) {
-        AlertDialog(
-            onDismissRequest = { confirmStartAgain = false },
-            title = { Text(stringResource(R.string.live_sure_title)) },
-            text = { Text(stringResource(R.string.live_start_sure_text)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    confirmStartAgain = false
-                    startBroadcast(context)
-                }) { Text(stringResource(R.string.live_start_anyway), color = MaterialTheme.colorScheme.error) }
-            },
-            dismissButton = { TextButton(onClick = { confirmStartAgain = false }) { Text(stringResource(R.string.cancel)) } },
-        )
-    }
     guarded?.let { action ->
         AlertDialog(
             onDismissRequest = { guarded = null },
@@ -415,6 +402,22 @@ private fun LiveScreen(settings: Settings, permissionsReady: Boolean, onRequestP
                 }) { Text(stringResource(R.string.live_continue)) }
             },
             dismissButton = { TextButton(onClick = { guarded = null }) { Text(stringResource(R.string.cancel)) } },
+        )
+    }
+    if (settingsOpen) {
+        SettingsSheet(
+            state = state,
+            onGuarded = { action -> if (tally == Tally.PROGRAM) guarded = action else action() },
+            onSupport = { settingsOpen = false; supportOpen = true },
+            onDismiss = { settingsOpen = false },
+        )
+    }
+    if (supportOpen) {
+        AlertDialog(
+            onDismissRequest = { supportOpen = false },
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            text = { Column(Modifier.verticalScroll(rememberScrollState())) { ContributionContent() } },
+            confirmButton = { TextButton(onClick = { supportOpen = false }) { Text(stringResource(R.string.main_close)) } },
         )
     }
 }
@@ -457,18 +460,32 @@ private fun PermissionPrompt(modifier: Modifier, onRequest: () -> Unit) {
     }
 }
 
+/** "ON AIR" / "PREVIEW". */
+@Composable
+private fun tallyLabel(tally: Tally): String =
+    stringResource(if (tally == Tally.PROGRAM) R.string.tally_program else R.string.tally_preview)
+
 private enum class IndicatorShape { FILLED, RING, LINK }
 
 @Composable
-private fun Header(state: UiState, tally: Tally, onAir: String?, modifier: Modifier, onDetails: () -> Unit, onHide: (() -> Unit)?) {
+private fun Header(
+    state: UiState,
+    tally: Tally,
+    onAir: String?,
+    live: String?,
+    modifier: Modifier,
+    onDetails: () -> Unit,
+    onSupport: (() -> Unit)?,
+    onHide: (() -> Unit)?,
+) {
     val (label, color, shape) = when {
-        tally == Tally.PROGRAM -> Triple(R.string.tally_program, StatusColors.program, IndicatorShape.FILLED)
-        tally == Tally.PREVIEW -> Triple(R.string.tally_preview, StatusColors.preview, IndicatorShape.RING)
+        tally == Tally.PROGRAM -> Triple(tallyLabel(tally), StatusColors.program, IndicatorShape.FILLED)
+        tally == Tally.PREVIEW -> Triple(tallyLabel(tally), StatusColors.preview, IndicatorShape.RING)
         else -> when (state.phase) {
-            Phase.STOPPED -> Triple(R.string.status_stopped, StatusColors.stopped, IndicatorShape.FILLED)
-            Phase.WAITING -> Triple(R.string.status_waiting, StatusColors.waiting, IndicatorShape.FILLED)
-            Phase.CONNECTED -> Triple(R.string.status_connected, StatusColors.connected, IndicatorShape.LINK)
-            Phase.STREAMING -> Triple(R.string.status_streaming, StatusColors.streaming, IndicatorShape.RING)
+            Phase.STOPPED -> Triple(stringResource(R.string.status_stopped), StatusColors.stopped, IndicatorShape.FILLED)
+            Phase.WAITING -> Triple(stringResource(R.string.status_waiting), StatusColors.waiting, IndicatorShape.FILLED)
+            Phase.CONNECTED -> Triple(stringResource(R.string.status_connected), StatusColors.connected, IndicatorShape.LINK)
+            Phase.STREAMING -> Triple(stringResource(R.string.status_streaming), StatusColors.streaming, IndicatorShape.RING)
         }
     }
     val base = when (state.phase) {
@@ -476,7 +493,11 @@ private fun Header(state: UiState, tally: Tally, onAir: String?, modifier: Modif
         Phase.CONNECTED -> state.peer.orEmpty()
         else -> state.deviceName
     }
-    val subtitle = listOfNotNull(onAir?.let { stringResource(R.string.tally_on_air_for, it) }, base.ifEmpty { null }).joinToString(" · ")
+    val subtitle = listOfNotNull(
+        onAir?.let { stringResource(R.string.tally_on_air_for, it) },
+        live.takeIf { onAir == null },  // the on-air clock already says how long this has been running
+        base.ifEmpty { null },
+    ).joinToString(" · ")
     Surface(modifier, shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainer) {
         Row(
             Modifier.padding(start = 14.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
@@ -484,7 +505,7 @@ private fun Header(state: UiState, tally: Tally, onAir: String?, modifier: Modif
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Row(
-                Modifier.weight(1f),
+                Modifier.weight(1f).clickable(onClickLabel = stringResource(R.string.details), onClick = onDetails),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
@@ -494,7 +515,7 @@ private fun Header(state: UiState, tally: Tally, onAir: String?, modifier: Modif
                     IndicatorShape.LINK -> Icon(painterResource(R.drawable.ic_link), null, Modifier.size(16.dp), tint = color)
                 }
                 Column {
-                    Text(stringResource(label), color = color, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(label, color = color, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (subtitle.isNotEmpty()) {
                         Text(
                             subtitle,
@@ -504,6 +525,15 @@ private fun Header(state: UiState, tally: Tally, onAir: String?, modifier: Modif
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
+                }
+            }
+            if (onSupport != null) {
+                IconButton(onClick = onSupport) {
+                    Icon(
+                        painterResource(R.drawable.ic_favorite_border),
+                        contentDescription = stringResource(R.string.main_support),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
             if (onHide != null) {
@@ -579,9 +609,7 @@ private fun DetailsPanel(state: UiState) {
     if (addresses.isEmpty()) {
         Text(stringResource(R.string.no_network), style = MaterialTheme.typography.bodyMedium)
     } else {
-        addresses.forEach {
-            Text(stringResource(R.string.connect_port, it, Wire.TCP_PORT), fontWeight = FontWeight.SemiBold)
-        }
+        Text(stringResource(R.string.connect_port, firstAddress.orEmpty(), Wire.TCP_PORT), fontWeight = FontWeight.SemiBold)
         TextButton(onClick = {
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             clipboard.setPrimaryClip(ClipData.newPlainText("Niriun", firstAddress))
@@ -599,6 +627,11 @@ private fun DetailsPanel(state: UiState) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
+    Text(
+        stringResource(R.string.tally_info),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
     if (state.phase == Phase.STREAMING) {
         Text(
             stringResource(
@@ -609,158 +642,6 @@ private fun DetailsPanel(state: UiState) {
             ),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
-private fun SettingsPanel(state: UiState, settings: Settings, onGuarded: (() -> Unit) -> Unit) {
-    if (state.cameras.isNotEmpty()) {
-        Text(stringResource(R.string.camera_title), style = MaterialTheme.typography.titleSmall)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            state.cameras.forEachIndexed { index, name ->
-                FilterChip(selected = index == state.selectedCamera, onClick = { onGuarded { NiriunRuntime.selectCamera(index) } }, label = { Text(name) })
-            }
-        }
-        if (state.torchAvailable) SwitchRow(stringResource(R.string.torch), state.torch) { NiriunRuntime.setTorch(it) }
-        SwitchRow(stringResource(R.string.mirror), state.mirror) { enabled -> onGuarded { NiriunRuntime.setMirror(enabled) } }
-    }
-    ObsSection(state, settings)
-}
-
-@Composable
-private fun ObsSection(state: UiState, settings: Settings) {
-    val obs = state.obs
-    val configured = state.obsHost.isNotBlank()
-    var host by remember { mutableStateOf(settings.obsHost) }
-    var port by remember { mutableStateOf(settings.obsPort.toString()) }
-    var password by remember { mutableStateOf(settings.obsPassword) }
-    var usePassword by remember { mutableStateOf(settings.obsPassword.isNotEmpty()) }
-    var editingConnection by rememberSaveable { mutableStateOf(false) }
-    var changingSource by rememberSaveable { mutableStateOf(false) }
-    var showManual by rememberSaveable { mutableStateOf(false) }
-
-    Text(stringResource(R.string.obs_title), style = MaterialTheme.typography.titleSmall)
-
-    // Step 1: connect to OBS. The source is only asked for once the connection works.
-    if (!configured || editingConnection) {
-        Text(stringResource(R.string.obs_intro), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(stringResource(R.string.obs_step_enable), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        OutlinedTextField(
-            value = host, onValueChange = { host = it.take(100) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-            label = { Text(stringResource(R.string.obs_host)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-        )
-        OutlinedTextField(
-            value = port, onValueChange = { port = it.filter(Char::isDigit).take(5) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-            label = { Text(stringResource(R.string.obs_port)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        )
-        SwitchRow(stringResource(R.string.obs_use_password), usePassword) { usePassword = it }
-        if (usePassword) {
-            OutlinedTextField(
-                value = password, onValueChange = { password = it.take(100) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.obs_password)) },
-                visualTransformation = PasswordVisualTransformation(),
-            )
-        }
-        if (configured) ObsStatusLine(obs)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Button(
-                enabled = host.isNotBlank(),
-                onClick = {
-                    settings.obsHost = host
-                    settings.obsPort = port.toIntOrNull()?.takeIf { it in 1..65535 } ?: 4455
-                    settings.obsPassword = if (usePassword) password else ""
-                    NiriunRuntime.reloadObs()
-                    editingConnection = false
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = BrandPurple, contentColor = Color.White),
-            ) { Text(stringResource(R.string.obs_connect)) }
-            if (editingConnection) TextButton(onClick = { editingConnection = false }) { Text(stringResource(R.string.cancel)) }
-        }
-        return
-    }
-
-    if (obs.connection != ObsConnection.CONNECTED) {
-        ObsStatusLine(obs)
-        Row {
-            TextButton(onClick = { editingConnection = true }) { Text(stringResource(R.string.obs_edit)) }
-            TextButton(onClick = { NiriunRuntime.forgetObs() }) { Text(stringResource(R.string.obs_disconnect)) }
-        }
-        return
-    }
-
-    // Step 2: pick (or create) the OBS source that carries this phone.
-    val sourceSet = state.obsSource.isNotBlank()
-    val sourceValid = sourceSet && (obs.inputs.isEmpty() || state.obsSource in obs.inputs)
-    val created = obs.createResult as? CreateResult.Created
-    if (sourceValid && !changingSource) {
-        Text(stringResource(R.string.obs_connected), style = MaterialTheme.typography.bodyMedium, color = StatusColors.connected)
-        Text(
-            stringResource(R.string.obs_source_label, state.obsSource),
-            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1, overflow = TextOverflow.Ellipsis,
-        )
-        if (created != null && !created.deviceSet) {
-            Text(stringResource(R.string.obs_created_manual, created.name), style = MaterialTheme.typography.bodySmall, color = StatusColors.waiting)
-        }
-        Row {
-            TextButton(onClick = { changingSource = true }) { Text(stringResource(R.string.obs_change_source)) }
-            TextButton(onClick = { NiriunRuntime.forgetObs() }) { Text(stringResource(R.string.obs_disconnect)) }
-        }
-        return
-    }
-
-    Text(stringResource(R.string.obs_connected), style = MaterialTheme.typography.bodyMedium, color = StatusColors.connected)
-    Text(stringResource(R.string.obs_choose_source), style = MaterialTheme.typography.bodyMedium)
-    if (sourceSet && !sourceValid) {
-        Text(stringResource(R.string.obs_source_missing, state.obsSource), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-    }
-    if (obs.inputs.isEmpty()) {
-        Text(stringResource(R.string.obs_no_sources), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    } else {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            obs.inputs.forEach { name ->
-                FilterChip(
-                    selected = name == state.obsSource,
-                    onClick = {
-                        NiriunRuntime.selectObsSource(name)
-                        changingSource = false
-                    },
-                    label = { Text(name) },
-                )
-            }
-        }
-    }
-    Text(stringResource(R.string.obs_not_listed), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    OutlinedButton(onClick = { NiriunRuntime.createObsSource() }, enabled = !obs.creating) {
-        Text(stringResource(if (obs.creating) R.string.obs_creating else R.string.obs_create))
-    }
-    when (val result = obs.createResult) {
-        is CreateResult.Failed -> Text(stringResource(R.string.obs_create_failed, result.message), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-        is CreateResult.Created -> if (!result.deviceSet) {
-            Text(stringResource(R.string.obs_created_manual, result.name), style = MaterialTheme.typography.bodySmall, color = StatusColors.waiting)
-        }
-        null -> Unit
-    }
-    TextButton(onClick = { showManual = !showManual }) { Text(stringResource(R.string.obs_manual_toggle)) }
-    if (showManual) {
-        Text(stringResource(R.string.obs_manual_steps), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-    Row {
-        if (changingSource) TextButton(onClick = { changingSource = false }) { Text(stringResource(R.string.cancel)) }
-        TextButton(onClick = { NiriunRuntime.forgetObs() }) { Text(stringResource(R.string.obs_disconnect)) }
-    }
-}
-
-@Composable
-private fun ObsStatusLine(obs: com.niriun.app.obs.ObsState) {
-    when (obs.connection) {
-        ObsConnection.OFF -> Unit
-        ObsConnection.CONNECTING -> Text(stringResource(R.string.obs_connecting), style = MaterialTheme.typography.bodySmall)
-        ObsConnection.CONNECTED -> Text(stringResource(R.string.obs_connected), style = MaterialTheme.typography.bodySmall, color = StatusColors.connected)
-        ObsConnection.ERROR -> Text(
-            obs.message ?: stringResource(R.string.obs_unreachable),
-            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error,
         )
     }
 }
@@ -786,24 +667,28 @@ private fun TallyEdgeOverlay(modifier: Modifier, color: Color, flash: Boolean) {
 }
 
 @Composable
-private fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label)
-        Switch(checked = checked, onCheckedChange = onChange)
-    }
-}
-
-@Composable
 private fun ErrorText(text: String) {
     Text(text, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
 }
 
+/**
+ * The address a computer on the same network would use, best first: Wi-Fi, hotspot and Ethernet before anything else.
+ * Cellular interfaces (rmnet*, ccmni*) and the 192.0.0.0/29 range used by the carrier's IPv4 translation (CLAT, e.g.
+ * 192.0.0.8) are not reachable from a computer, so they are left out.
+ */
 private fun localAddresses(): List<String> = runCatching {
+    fun rank(name: String) = when {
+        name.startsWith("wlan") || name.startsWith("swlan") || name.startsWith("ap") -> 0
+        name.startsWith("eth") || name.startsWith("rndis") || name.startsWith("usb") -> 1
+        else -> 2
+    }
     NetworkInterface.getNetworkInterfaces().toList()
-        .filter { it.isUp && !it.isLoopback }
+        .filter { it.isUp && !it.isLoopback && !it.name.startsWith("rmnet") && !it.name.startsWith("ccmni") && !it.name.startsWith("v4-") }
+        .sortedBy { rank(it.name) }
         .flatMap { it.inetAddresses.toList() }
         .filterIsInstance<Inet4Address>()
         .mapNotNull { it.hostAddress }
+        .filterNot { it.startsWith("192.0.0.") }
 }.getOrDefault(emptyList())
 
 private fun startBroadcast(context: Context) {

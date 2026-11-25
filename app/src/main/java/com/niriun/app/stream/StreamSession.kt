@@ -13,8 +13,6 @@ import com.niriun.app.net.ControlServer
 import com.niriun.app.net.DeviceIdentity
 import com.niriun.app.net.NsdAdvertiser
 import com.niriun.app.net.ProbeServer
-import com.niriun.app.obs.ObsClient
-import com.niriun.app.obs.ObsConfig
 import com.niriun.app.protocol.Ack
 import com.niriun.app.protocol.Control
 import com.niriun.app.protocol.ControlId
@@ -26,8 +24,10 @@ import com.niriun.app.protocol.PacketBuilder
 import com.niriun.app.protocol.CameraUsage
 import com.niriun.app.protocol.PeerInfo
 import com.niriun.app.protocol.StartRequest
-import com.niriun.app.protocol.Touch
+import com.niriun.app.protocol.Tally
+import com.niriun.app.protocol.TallyMessage
 import com.niriun.app.protocol.VideoMode
+import com.niriun.app.protocol.Touch
 import com.niriun.app.protocol.Wire
 
 /**
@@ -51,7 +51,6 @@ class StreamSession(
     private val probe = ProbeServer(Wire.PROBE_PORT) { hello() }
     private val beacon = BeaconSender { hello() }
     private val nsd = NsdAdvertiser(context, identity)
-    private val obs = ObsClient { s -> publish { it.copy(obs = s) } }
     private val backlog = EncoderBacklog()
     private val camera = CameraPipeline(context, clock, flow, backlog) { message -> post { fail(message) } }
 
@@ -108,16 +107,11 @@ class StreamSession(
                 microphoneAvailable = micSupported && hasPermission(Manifest.permission.RECORD_AUDIO),
                 mirror = mirror,
                 torchAvailable = catalog.cameras.getOrNull(selectedIndex)?.hasFlash == true,
-                obs = it.obs,
-                obsHost = settings.obsHost,
-                obsSource = settings.obsSource,
             )
         }
-        // The tally link starts with the app (not with Start) so we already know if this source is ON AIR.
-        configureObs()
     }
 
-    /** Start/stop the network side (discovery, TCP server, OBS link) while the camera preview keeps running. */
+    /** Start/stop the network side (discovery, TCP server) while the camera preview keeps running. */
     fun setBroadcasting(enabled: Boolean) = post { if (enabled) startBroadcast() else stopBroadcast() }
 
     private fun startBroadcast() {
@@ -148,7 +142,7 @@ class StreamSession(
         probe.stop()
         server.stop()
         connected = false
-        publish { it.copy(phase = Phase.STOPPED, peer = null, streamInfo = null, audioActive = false, fps = 0f, kbps = 0) }
+        publish { it.copy(phase = Phase.STOPPED, peer = null, streamInfo = null, audioActive = false, fps = 0f, kbps = 0, tally = Tally.OFF, tallySource = "") }
         ensureCamera()
         scheduleIdleExit()
     }
@@ -167,7 +161,6 @@ class StreamSession(
             handler.removeCallbacksAndMessages(null)
             stopStreaming()
             displayManager.unregisterDisplayListener(displayListener)
-            obs.release()
             beacon.stop()
             nsd.stop()
             probe.stop()
@@ -178,31 +171,6 @@ class StreamSession(
         }
         done.await(5, java.util.concurrent.TimeUnit.SECONDS)
         worker.quitSafely()
-    }
-
-    /** Re-reads the OBS settings and reconnects (called when the user saves them). */
-    fun reloadObs() = post { configureObs() }
-
-    fun selectObsSource(name: String) = post {
-        settings.obsSource = name
-        obs.setSource(name)
-        publish { it.copy(obsSource = name) }
-    }
-
-    /** Adds a camera source to OBS and starts watching it. */
-    fun createObsSource() = post {
-        obs.createCameraSource("Niriun") { name -> selectObsSource(name) }
-    }
-
-    fun forgetObs() = post {
-        settings.obsHost = ""
-        settings.obsSource = ""
-        configureObs()
-    }
-
-    private fun configureObs() {
-        obs.start(ObsConfig(settings.obsHost, settings.obsPort, settings.obsPassword, settings.obsSource))
-        publish { it.copy(obsHost = settings.obsHost, obsSource = settings.obsSource) }
     }
 
     // ---- UI entry points ----
@@ -259,7 +227,7 @@ class StreamSession(
         connected = false
         stopStreaming()
         if (broadcasting) beacon.start()
-        publish { it.copy(phase = if (broadcasting) Phase.WAITING else Phase.STOPPED, peer = null, streamInfo = null, audioActive = false, fps = 0f, kbps = 0, pcCameraInUse = null) }
+        publish { it.copy(phase = if (broadcasting) Phase.WAITING else Phase.STOPPED, peer = null, streamInfo = null, audioActive = false, fps = 0f, kbps = 0, pcCameraInUse = null, tally = Tally.OFF, tallySource = "") }
     }
 
     private fun handlePacket(p: Packet) {
@@ -268,6 +236,7 @@ class StreamSession(
             // backwards (GraphicBufferSource then drops every frame), so only honour it while idle.
             MessageType.SYNC -> if (activeRequest == null) clock.reset()
             MessageType.PEER_INFO -> PeerInfo.parse(p)
+            MessageType.TALLY -> TallyMessage.parse(p)?.let { t -> publish { it.copy(tally = t.state, tallySource = t.source) } }
             MessageType.CAMERA_USAGE -> CameraUsage.parse(p)?.let { usage -> publish { it.copy(pcCameraInUse = usage.inUse) } }
             MessageType.START -> StartRequest.parse(p)?.let(::handleStart)
             MessageType.CONTROL -> Control.parse(p)?.let(::handleControl)
