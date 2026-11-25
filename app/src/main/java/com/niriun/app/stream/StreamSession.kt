@@ -64,6 +64,7 @@ class StreamSession(
         override fun onDisplayChanged(displayId: Int) {
             if (displayId == Display.DEFAULT_DISPLAY) post {
                 camera.setDisplayRotation(currentDisplayRotation())
+                publishAspect()
                 applyOrientation()
             }
         }
@@ -96,6 +97,7 @@ class StreamSession(
         started = true
         selectedIndex = catalog.cameras.indexOfFirst { it.id == settings.cameraId }.coerceAtLeast(0)
         camera.setMirror(mirror)
+        settings.preferences.let { camera.setLook(it.brightness, it.contrast, it.saturation) }
         camera.setDisplayRotation(currentDisplayRotation())
         displayManager.registerDisplayListener(displayListener, handler)
         publish {
@@ -107,6 +109,7 @@ class StreamSession(
                 microphoneAvailable = micSupported && hasPermission(Manifest.permission.RECORD_AUDIO),
                 mirror = mirror,
                 torchAvailable = catalog.cameras.getOrNull(selectedIndex)?.hasFlash == true,
+                previewAspect = camera.previewAspect,
             )
         }
     }
@@ -137,6 +140,11 @@ class StreamSession(
         broadcasting = false
         handler.removeCallbacks(statsTick)
         stopStreaming(releaseCamera = false)
+        if (connected) {
+            // Tell the PC what to show before the connection closes (a short pause lets the packet leave first).
+            server.send(PacketBuilder.stopScreen(settings.preferences.stopScreen.wire))
+            Thread.sleep(150)
+        }
         beacon.stop()
         nsd.stop()
         probe.stop()
@@ -187,6 +195,8 @@ class StreamSession(
     fun setTorch(enabled: Boolean) = post { applyTorch(enabled) }
 
     fun setMirror(enabled: Boolean) = post { applyMirror(enabled) }
+
+    fun setLook(brightness: Float, contrast: Float, saturation: Float) = post { camera.setLook(brightness, contrast, saturation) }
 
     fun setZoom(percent: Int) = post { camera.setZoomPercent(percent) }
 
@@ -263,11 +273,12 @@ class StreamSession(
         activeRequest = req
         val fps = req.fps.toInt().coerceIn(1, 120)
         camera.open(cam, catalog.bestSize(cam, maxOf(req.width, req.height), minOf(req.width, req.height)), fps)
+        publishAspect()
         camera.setTorch(torch)
         if (!startEncoder(req)) return
 
         var audioOn = false
-        if (req.sendAudio && micSupported && hasPermission(Manifest.permission.RECORD_AUDIO)) {
+        if (req.sendAudio && settings.preferences.audio && micSupported && hasPermission(Manifest.permission.RECORD_AUDIO)) {
             audio = AudioStreamer(sender) { message -> post { audioFailed(message) } }.also { it.start() }
             audioOn = true
         }
@@ -299,12 +310,19 @@ class StreamSession(
         }
     }
 
+    /** The UI draws the framing grid over the picture, so it needs its shape. */
+    private fun publishAspect() {
+        val aspect = camera.previewAspect
+        publish { it.copy(previewAspect = aspect) }
+    }
+
     /** Preview-only camera: open while a preview surface is attached and nothing is streaming. */
     private fun ensureCamera() {
         if (activeRequest != null) return
         val cam = catalog.cameras.getOrNull(selectedIndex)
         if (previewSurface != null && cam != null && hasPermission(Manifest.permission.CAMERA)) {
             camera.open(cam, catalog.previewSize(cam), 30)
+            publishAspect()
         } else {
             camera.close()
         }
@@ -318,6 +336,7 @@ class StreamSession(
         val req = activeRequest
         if (req != null) {
             camera.open(cam, catalog.bestSize(cam, maxOf(req.width, req.height), minOf(req.width, req.height)), req.fps.toInt().coerceIn(1, 120))
+            publishAspect()
         } else {
             ensureCamera()
         }

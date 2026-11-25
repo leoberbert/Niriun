@@ -13,6 +13,7 @@ import android.os.SystemClock
 import android.view.HapticFeedbackConstants
 import android.view.SurfaceHolder
 import android.view.SurfaceView
+import android.view.WindowManager
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -63,6 +64,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -79,13 +81,20 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.niriun.app.R
 import com.niriun.app.protocol.Tally
 import com.niriun.app.protocol.Wire
 import com.niriun.app.stream.NiriunRuntime
 import com.niriun.app.stream.Phase
+import com.niriun.app.stream.ControlsMode
+import com.niriun.app.stream.FramingGrid
+import com.niriun.app.stream.Preferences
+import com.niriun.app.stream.ScreenPower
 import com.niriun.app.stream.Settings
+import com.niriun.app.stream.TallyAlert
 import com.niriun.app.stream.StreamService
 import com.niriun.app.stream.UiState
 import java.net.Inet4Address
@@ -164,15 +173,32 @@ private fun LiveScreen(permissionsReady: Boolean, onRequestPermissions: () -> Un
     var guarded by remember { mutableStateOf<(() -> Unit)?>(null) }
     var zoom by remember(state.selectedCamera) { mutableFloatStateOf(0f) }
 
+    // Settings: saved as soon as they change; the look is applied to the preview and to the stream.
+    val appSettings = remember { Settings(context) }
+    var prefs by remember { mutableStateOf(appSettings.preferences) }
+    val updatePrefs: (Preferences) -> Unit = {
+        prefs = it
+        appSettings.preferences = it
+    }
+    LaunchedEffect(prefs.brightness, prefs.contrast, prefs.saturation, running) {
+        NiriunRuntime.setLook(prefs.brightness, prefs.contrast, prefs.saturation)
+    }
+    // The service stops itself 3 s after the screen goes away (app switch, screen lock): coming back starts it again.
+    LifecycleEventEffect(Lifecycle.Event.ON_START) {
+        if (permissionsReady && NiriunRuntime.service == null) StreamService.start(context)
+    }
+
     // Controls fade out while streaming so the picture is clean; tapping brings them back.
-    val showControls = expanded || !permissionsReady
-    LaunchedEffect(streaming, expanded, tool, interaction, settingsOpen) {
-        if (streaming && expanded && tool == Tool.NONE && !settingsOpen) {
+    val mode = prefs.controls
+    val showControls = mode == ControlsMode.ALWAYS || expanded || !permissionsReady
+    val showHeader = showControls || (streaming && mode == ControlsMode.COMPACT)
+    LaunchedEffect(streaming, expanded, tool, interaction, settingsOpen, mode) {
+        if (streaming && mode == ControlsMode.AUTO && expanded && tool == Tool.NONE && !settingsOpen) {
             delay(5000)
             expanded = false
         }
     }
-    LaunchedEffect(streaming) { expanded = true }
+    LaunchedEffect(streaming, mode) { expanded = !streaming || mode != ControlsMode.COMPACT }
     BackHandler(enabled = !showControls) { expanded = true }
     BackHandler(enabled = showControls && tool != Tool.NONE) { tool = Tool.NONE }
 
@@ -208,7 +234,7 @@ private fun LiveScreen(permissionsReady: Boolean, onRequestPermissions: () -> Un
     var onAirSince by remember { mutableLongStateOf(0L) }
     LaunchedEffect(tally) {
         if (tally == Tally.PROGRAM) {
-            view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+            if (prefs.tallyAlert != TallyAlert.OFF) view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
             onAirSince = SystemClock.elapsedRealtime()
             while (true) {
                 nowMs = SystemClock.elapsedRealtime()
@@ -230,10 +256,40 @@ private fun LiveScreen(permissionsReady: Boolean, onRequestPermissions: () -> Un
     } else {
         null
     }
-    DisposableEffect(activity, view, showControls) {
+    val alertOn = when (prefs.tallyAlert) {
+        TallyAlert.OFF -> false
+        TallyAlert.PROGRAM -> tally == Tally.PROGRAM
+        TallyAlert.PROGRAM_AND_PREVIEW -> tally != Tally.OFF
+    }
+    LaunchedEffect(tally, prefs.tallyAlert) {
+        if (tally == Tally.PREVIEW && prefs.tallyAlert == TallyAlert.PROGRAM_AND_PREVIEW) view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+    }
+
+    // Controls hidden while streaming: dim the screen to save battery and heat (tap to bring it back).
+    val immersive = !showHeader && streaming && !settingsOpen && !confirmStop && !confirmStopAgain && guarded == null
+    val powerSave = immersive && prefs.screenPower != ScreenPower.NORMAL
+    DisposableEffect(activity, powerSave, prefs.screenPower) {
+        val window = activity?.window
+        if (window != null) {
+            val attrs = window.attributes
+            attrs.screenBrightness = when {
+                !powerSave -> WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+                prefs.screenPower == ScreenPower.DIM -> 0.05f
+                else -> 0.01f
+            }
+            window.attributes = attrs
+        }
+        onDispose {
+            val restore = activity?.window ?: return@onDispose
+            val attrs = restore.attributes
+            attrs.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+            restore.attributes = attrs
+        }
+    }
+    DisposableEffect(activity, view, showHeader) {
         val controller = activity?.let { WindowCompat.getInsetsController(it.window, view) }
         controller?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        if (showControls) controller?.show(WindowInsetsCompat.Type.systemBars()) else controller?.hide(WindowInsetsCompat.Type.systemBars())
+        if (showHeader) controller?.show(WindowInsetsCompat.Type.systemBars()) else controller?.hide(WindowInsetsCompat.Type.systemBars())
         onDispose { controller?.show(WindowInsetsCompat.Type.systemBars()) }
     }
 
@@ -272,14 +328,16 @@ private fun LiveScreen(permissionsReady: Boolean, onRequestPermissions: () -> Un
                 PermissionPrompt(Modifier.align(Alignment.Center), onRequestPermissions)
             }
 
+            if (permissionsReady) FramingGridOverlay(Modifier.fillMaxSize(), state.previewAspect, prefs.framingGrid)
+            if (powerSave && prefs.screenPower == ScreenPower.OFF) Box(Modifier.fillMaxSize().background(Color.Black))
             if (tally != Tally.OFF) {
                 val tallyColor = if (tally == Tally.PROGRAM) StatusColors.program else StatusColors.preview
-                TallyEdgeOverlay(
+                if (alertOn) TallyEdgeOverlay(
                     Modifier.fillMaxSize().safeDrawingPadding(),
                     if (tally == Tally.PROGRAM) StatusColors.programEdge else StatusColors.previewEdge,
                     tallyFlash,
                 )
-                if (!showControls) {
+                if (!showHeader) {
                     Row(
                         Modifier.align(Alignment.TopStart).safeDrawingPadding().padding(start = 16.dp, top = 14.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -298,7 +356,7 @@ private fun LiveScreen(permissionsReady: Boolean, onRequestPermissions: () -> Un
                 }
             }
 
-            if (showControls) {
+            if (showHeader) {
                 Header(
                     state = state,
                     tally = tally,
@@ -308,8 +366,10 @@ private fun LiveScreen(permissionsReady: Boolean, onRequestPermissions: () -> Un
                     onDetails = { tool = if (tool == Tool.DETAILS) Tool.NONE else Tool.DETAILS },
                     // Low-key support entry, like DroidNDI: only while no picture is being sent.
                     onSupport = if (!streaming) ({ supportOpen = true }) else null,
-                    onHide = if (permissionsReady) ({ expanded = false }) else null,
+                    onHide = if (permissionsReady && mode != ControlsMode.ALWAYS) ({ expanded = false }) else null,
                 )
+            }
+            if (showControls) {
                 Surface(
                     Modifier
                         .align(if (landscape) Alignment.BottomEnd else Alignment.BottomCenter)
@@ -407,6 +467,8 @@ private fun LiveScreen(permissionsReady: Boolean, onRequestPermissions: () -> Un
     if (settingsOpen) {
         SettingsSheet(
             state = state,
+            prefs = prefs,
+            onPrefs = updatePrefs,
             onGuarded = { action -> if (tally == Tally.PROGRAM) guarded = action else action() },
             onSupport = { settingsOpen = false; supportOpen = true },
             onDismiss = { settingsOpen = false },
@@ -693,4 +755,41 @@ private fun localAddresses(): List<String> = runCatching {
 
 private fun startBroadcast(context: Context) {
     if (NiriunRuntime.service == null) StreamService.start(context, broadcast = true) else NiriunRuntime.setBroadcasting(true)
+}
+
+/**
+ * Thirds or a cross over the picture, to frame the shot. [aspect] is the picture's width/height, so the lines fit the
+ * letterboxed image rather than the whole screen. Only drawn on this screen, never sent to OBS.
+ */
+@Composable
+private fun FramingGridOverlay(modifier: Modifier, aspect: Float, grid: FramingGrid) {
+    if (grid == FramingGrid.OFF || aspect <= 0f) return
+    Canvas(modifier) {
+        val w: Float
+        val h: Float
+        if (size.width / size.height > aspect) {
+            h = size.height
+            w = size.height * aspect
+        } else {
+            w = size.width
+            h = size.width / aspect
+        }
+        val left = (size.width - w) / 2f
+        val top = (size.height - h) / 2f
+        val color = Color.White.copy(alpha = 0.45f)
+        val stroke = 1.dp.toPx()
+        when (grid) {
+            FramingGrid.THIRDS -> for (i in 1..2) {
+                val x = left + w * i / 3f
+                val y = top + h * i / 3f
+                drawLine(color, Offset(x, top), Offset(x, top + h), stroke)
+                drawLine(color, Offset(left, y), Offset(left + w, y), stroke)
+            }
+            FramingGrid.CROSS -> {
+                drawLine(color, Offset(left + w / 2f, top), Offset(left + w / 2f, top + h), stroke)
+                drawLine(color, Offset(left, top + h / 2f), Offset(left + w, top + h / 2f), stroke)
+            }
+            FramingGrid.OFF -> Unit
+        }
+    }
 }

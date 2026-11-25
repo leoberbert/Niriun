@@ -56,6 +56,9 @@ class GlRenderer(
     private var aTexCoord = 0
     private var uMvp = 0
     private var uTexMatrix = 0
+    private var uBrightness = 0
+    private var uContrast = 0
+    private var uSaturation = 0
     private var oesTexture = 0
     private var surfaceTexture: SurfaceTexture? = null
     private var cameraSurface: Surface? = null
@@ -70,6 +73,9 @@ class GlRenderer(
     @Volatile private var rotation = 0
     @Volatile private var mirror = false
     @Volatile private var released = false
+    @Volatile private var brightness = 0f
+    @Volatile private var contrast = 1f
+    @Volatile private var saturation = 1f
 
     private val quad: FloatBuffer = ByteBuffer.allocateDirect(QUAD.size * 4).order(ByteOrder.nativeOrder())
         .asFloatBuffer().also { it.put(QUAD).position(0) }
@@ -97,6 +103,13 @@ class GlRenderer(
 
     fun setMirror(enabled: Boolean) {
         mirror = enabled
+    }
+
+    /** Colour adjustment applied to the preview and the encoder alike: brightness -1..1, contrast 0.5..1.5, saturation 0..2. */
+    fun setLook(brightness: Float, contrast: Float, saturation: Float) {
+        this.brightness = brightness
+        this.contrast = contrast
+        this.saturation = saturation
     }
 
     fun setPreviewSurface(surface: Surface?) = runOnGl { replaceOutput(isEncoder = false, surface) }
@@ -164,6 +177,9 @@ class GlRenderer(
         aTexCoord = GLES20.glGetAttribLocation(program, "aTexCoord")
         uMvp = GLES20.glGetUniformLocation(program, "uMvp")
         uTexMatrix = GLES20.glGetUniformLocation(program, "uTexMatrix")
+        uBrightness = GLES20.glGetUniformLocation(program, "uBrightness")
+        uContrast = GLES20.glGetUniformLocation(program, "uContrast")
+        uSaturation = GLES20.glGetUniformLocation(program, "uSaturation")
 
         val tex = IntArray(1)
         GLES20.glGenTextures(1, tex, 0)
@@ -244,6 +260,9 @@ class GlRenderer(
         GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, oesTexture)
         GLES20.glUniformMatrix4fv(uMvp, 1, false, mvp, 0)
         GLES20.glUniformMatrix4fv(uTexMatrix, 1, false, texMatrix, 0)
+        GLES20.glUniform1f(uBrightness, brightness)
+        GLES20.glUniform1f(uContrast, contrast)
+        GLES20.glUniform1f(uSaturation, saturation)
         quad.position(0)
         GLES20.glVertexAttribPointer(aPosition, 2, GLES20.GL_FLOAT, false, 16, quad)
         GLES20.glEnableVertexAttribArray(aPosition)
@@ -350,8 +369,15 @@ class GlRenderer(
             precision mediump float;
             varying vec2 vTexCoord;
             uniform samplerExternalOES sTexture;
+            uniform float uBrightness;
+            uniform float uContrast;
+            uniform float uSaturation;
             void main() {
-                gl_FragColor = texture2D(sTexture, vTexCoord);
+                vec4 c = texture2D(sTexture, vTexCoord);
+                float luma = dot(c.rgb, vec3(0.213, 0.715, 0.072));
+                vec3 rgb = mix(vec3(luma), c.rgb, uSaturation);
+                rgb = (rgb - 0.5) * uContrast + 0.5 + uBrightness;
+                gl_FragColor = vec4(clamp(rgb, 0.0, 1.0), c.a);
             }
         """
     }

@@ -87,6 +87,7 @@ de câmeras. Quando câmera/tamanhos mudam em tempo de execução (`nativeSetSiz
 | `0x19` | Foco manual | `4` u32 flags (bit0 = manual); `8` f32 distância de foco (`LENS_FOCUS_DISTANCE`) |
 | `0x1A` | **Uso da câmera virtual** | `4` u32 versão (o celular ignora se ≤ 1); `8` u32 índice da câmera do PC (0–3); `12` u32 estado: **2 = algum aplicativo está com a câmera virtual aberta, 1 = ninguém** (engine.dll, ver `docs/WINDOWS.md` §3) |
 | `0x30` | **Tally (extensão Niriun)** | `4` u32 estado (0 = desligado, 1 = preview, 2 = programa); `8` nome da fonte opcional, 256 B NUL-preenchido. Não existe no Iriun original; ver §4.5 |
+| `0x31` | **Tela ao parar (extensão Niriun)** | `4` u32 modo (0 = nada, 1 = preto, 2 = cartão offline). Celular → PC; ver §4.6 |
 
 ### 4.3 Controle de câmera `0x10` (id → ação, vindo de `LocalService.d(int,int)`)
 
@@ -127,6 +128,19 @@ se a fonte está no programa ou no preview do OBS.
 * O plugin envia logo após o `START` e a cada mudança enquanto conectado. O celular nunca responde.
 * Estado desconhecido (> 2) ⇒ o pacote é ignorado. O nome serve só para exibição ("AO VIVO · Camera 1").
 * Ao desconectar, o celular volta o tally para desligado (sem PC o estado é desconhecido).
+
+### 4.6 Extensão Niriun: tela ao parar (0x31)
+
+Também **não faz parte do protocolo original**. Quando o usuário toca em Parar, o celular envia este pacote logo antes de
+fechar a conexão para dizer ao plugin o que deixar na fonte do OBS (opção "Ao parar, o OBS mostra" das configurações).
+
+| Offset | Campo |
+|---|---|
+| `0` | cabeçalho u32 LE = `(8 & 0xFFFFFF) \| (0x31 << 24)` |
+| `4` | u32 modo: `0` = sem imagem, `1` = quadro preto, `2` = cartão offline (roxo escuro com anel e traço) |
+
+* Celular → PC; só é enviado em parada deliberada. Queda de rede ou app fechado não enviam nada e o plugin limpa a imagem como antes.
+* Modo desconhecido ⇒ tratado como `0`. O plugin limpa o quadro quando a fonte é desativada.
 
 ## 5. Controle de fluxo (ACK)
 

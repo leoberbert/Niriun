@@ -107,7 +107,22 @@ Se o celular não aparecer no OBS, abra **Detalhes** no app (toque no status, no
 | Tocar no status (topo) | Abre os **Detalhes**: nome do celular e endereço para conectar |
 | ⛶ no topo | Recolhe os controles e deixa só a imagem |
 | ❤️ no topo | Apoiar o projeto (só aparece quando não está transmitindo) |
-| 🔍 ℹ️ ⚙️ embaixo | Zoom, Detalhes e Configurações (câmera, lanterna, espelho) |
+| 🔍 ℹ️ ⚙️ embaixo | Zoom, Detalhes e Configurações |
+| ❓ nas Configurações | Ajuda: o que fazer no OBS (instalar o plugin, adicionar a fonte, tally) |
+
+### ⚙️ Configurações
+
+Tudo vale na hora e fica salvo, sem botão Salvar. As seções seguem o DroidNDI:
+
+| Seção | Opções |
+|---|---|
+| 📷 Câmera | Câmera, lanterna, espelhar |
+| 🎨 Imagem | Brilho, contraste e saturação (valem para a prévia e para o que o OBS recebe) e grade de enquadramento (terços ou cruz, só nesta tela) |
+| 🎙️ Microfone | Enviar ou não o áudio ao OBS |
+| 🖥️ Tela e controles | **Economia de tela** (normal, escurecer ou quase apagada enquanto os controles estão escondidos), controles (automático, compacto ou sempre) e **Ao parar, o OBS mostra** (preto ou cartão offline) |
+| 🔴 Tally | Aviso na tela e vibração: desligado, só no ar, ou no ar e preview |
+
+Resolução, fps e nome da fonte não existem aqui: quem decide é o plugin no OBS. A opção "Ao parar, o OBS mostra" usa a mensagem `0x31` (ver [PROTOCOL.md](docs/PROTOCOL.md)) e precisa do plugin com essa versão.
 
 ---
 
