@@ -71,4 +71,23 @@
     <string name="live_action_text">This changes what viewers are seeing right now.</string>
     <string name="pc_camera_in_use">Computer: an app is using the camera</string>
     <string name="pc_camera_idle">Computer: no app is using the camera</string>
+    <string name="settings_expand_panel">Expand panel</string>
+    <string name="settings_shrink">Shrink panel</string>
+    <string name="settings_expand">Expand</string>
+    <string name="settings_collapse">Collapse</string>
+    <string name="settings_on">on</string>
+    <string name="settings_off">off</string>
+    <string name="settings_no_cameras">Cameras show up when a computer connects.</string>
+    <string name="settings_camera_hint">The camera and the mirror also change what the computer receives.</string>
+    <string name="settings_section_tally">OBS tally</string>
+    <string name="settings_tally_summary">Comes from the Niriun plugin</string>
+    <string name="settings_tally_hint">Pink border: the source is on air. Amber: it is in preview. Stopping while on air asks twice.</string>
+    <string name="settings_section_about">About</string>
+    <string name="settings_about_summary">Plugin, source code and license</string>
+    <string name="settings_about_text">Niriun turns this phone into a wireless camera for OBS Studio. Independent project, not affiliated with Iriun. Apache-2.0.</string>
+    <string name="settings_about_plugin">Niriun OBS plugin (GitHub)</string>
+    <string name="settings_about_source">App source code (GitHub)</string>
+    <string name="settings_more_options">More options ↓</string>
+    <string name="settings_back_to_top">Back to top ↑</string>
+    <string name="settings_close">Close</string>
 </resources>

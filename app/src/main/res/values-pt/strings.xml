@@ -71,4 +71,23 @@
     <string name="live_action_text">Isso muda o que os espectadores estão vendo agora.</string>
     <string name="pc_camera_in_use">Computador: um aplicativo está usando a câmera</string>
     <string name="pc_camera_idle">Computador: nenhum aplicativo está usando a câmera</string>
+    <string name="settings_expand_panel">Expandir painel</string>
+    <string name="settings_shrink">Reduzir painel</string>
+    <string name="settings_expand">Expandir</string>
+    <string name="settings_collapse">Recolher</string>
+    <string name="settings_on">ligado</string>
+    <string name="settings_off">desligado</string>
+    <string name="settings_no_cameras">As câmeras aparecem quando um computador se conecta.</string>
+    <string name="settings_camera_hint">A câmera e o espelho também mudam o que o computador recebe.</string>
+    <string name="settings_section_tally">Tally do OBS</string>
+    <string name="settings_tally_summary">Vem do plugin Niriun</string>
+    <string name="settings_tally_hint">Borda rosa: a fonte está no ar. Âmbar: está no preview. Parar no ar pede confirmação duas vezes.</string>
+    <string name="settings_section_about">Sobre</string>
+    <string name="settings_about_summary">Plugin, código-fonte e licença</string>
+    <string name="settings_about_text">O Niriun transforma este celular em câmera sem fio para o OBS Studio. Projeto independente, sem vínculo com o Iriun. Apache-2.0.</string>
+    <string name="settings_about_plugin">Plugin Niriun para OBS (GitHub)</string>
+    <string name="settings_about_source">Código-fonte do app (GitHub)</string>
+    <string name="settings_more_options">Mais opções ↓</string>
+    <string name="settings_back_to_top">Voltar ao topo ↑</string>
+    <string name="settings_close">Fechar</string>
 </resources>

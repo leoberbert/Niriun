@@ -27,7 +27,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -44,14 +43,12 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalIconToggleButton
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -94,7 +91,7 @@ import java.net.Inet4Address
 import java.net.NetworkInterface
 import kotlinx.coroutines.delay
 
-private enum class Tool { NONE, ZOOM, DETAILS, SETTINGS }
+private enum class Tool { NONE, ZOOM, DETAILS }
 
 /** Runtime permission introduced with Android 17 (API 37) for local-network access. */
 private const val LOCAL_NETWORK_PERMISSION = "android.permission.ACCESS_LOCAL_NETWORK"
@@ -156,6 +153,7 @@ private fun LiveScreen(permissionsReady: Boolean, onRequestPermissions: () -> Un
     var expanded by remember { mutableStateOf(true) }
     var interaction by remember { mutableLongStateOf(0L) }
     var confirmStop by remember { mutableStateOf(false) }
+    var settingsOpen by remember { mutableStateOf(false) }
     var confirmStopAgain by remember { mutableStateOf(false) }
     // Actions that change the picture are held back for confirmation while this phone is ON AIR in OBS.
     var guarded by remember { mutableStateOf<(() -> Unit)?>(null) }
@@ -163,8 +161,8 @@ private fun LiveScreen(permissionsReady: Boolean, onRequestPermissions: () -> Un
 
     // Controls fade out while streaming so the picture is clean; tapping brings them back.
     val showControls = expanded || !streaming
-    LaunchedEffect(streaming, expanded, tool, interaction) {
-        if (streaming && expanded && tool == Tool.NONE) {
+    LaunchedEffect(streaming, expanded, tool, interaction, settingsOpen) {
+        if (streaming && expanded && tool == Tool.NONE && !settingsOpen) {
             delay(5000)
             expanded = false
         }
@@ -306,9 +304,6 @@ private fun LiveScreen(permissionsReady: Boolean, onRequestPermissions: () -> Un
                                 interaction = android.os.SystemClock.uptimeMillis()
                             }
                             Tool.DETAILS -> DetailsPanel(state)
-                            Tool.SETTINGS -> SettingsPanel(state) { action ->
-                                if (tally == Tally.PROGRAM) guarded = action else action()
-                            }
                             Tool.NONE -> Unit
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -318,8 +313,8 @@ private fun LiveScreen(permissionsReady: Boolean, onRequestPermissions: () -> Un
                             ToolButton(R.drawable.ic_info, stringResource(R.string.details), tool == Tool.DETAILS) {
                                 tool = if (tool == Tool.DETAILS) Tool.NONE else Tool.DETAILS
                             }
-                            ToolButton(R.drawable.ic_settings, stringResource(R.string.settings), tool == Tool.SETTINGS) {
-                                tool = if (tool == Tool.SETTINGS) Tool.NONE else Tool.SETTINGS
+                            ToolButton(R.drawable.ic_settings, stringResource(R.string.settings), settingsOpen) {
+                                settingsOpen = true
                             }
                             Spacer(Modifier.weight(1f))
                             BroadcastButton(running, enabled = permissionsReady) {
@@ -377,6 +372,13 @@ private fun LiveScreen(permissionsReady: Boolean, onRequestPermissions: () -> Un
                 }) { Text(stringResource(R.string.live_continue)) }
             },
             dismissButton = { TextButton(onClick = { guarded = null }) { Text(stringResource(R.string.cancel)) } },
+        )
+    }
+    if (settingsOpen) {
+        SettingsSheet(
+            state = state,
+            onGuarded = { action -> if (tally == Tally.PROGRAM) guarded = action else action() },
+            onDismiss = { settingsOpen = false },
         )
     }
 }
@@ -586,20 +588,6 @@ private fun DetailsPanel(state: UiState) {
     }
 }
 
-@Composable
-private fun SettingsPanel(state: UiState, onGuarded: (() -> Unit) -> Unit) {
-    if (state.cameras.isNotEmpty()) {
-        Text(stringResource(R.string.camera_title), style = MaterialTheme.typography.titleSmall)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            state.cameras.forEachIndexed { index, name ->
-                FilterChip(selected = index == state.selectedCamera, onClick = { onGuarded { NiriunRuntime.selectCamera(index) } }, label = { Text(name) })
-            }
-        }
-        if (state.torchAvailable) SwitchRow(stringResource(R.string.torch), state.torch) { NiriunRuntime.setTorch(it) }
-        SwitchRow(stringResource(R.string.mirror), state.mirror) { enabled -> onGuarded { NiriunRuntime.setMirror(enabled) } }
-    }
-}
-
 /**
  * Tally frame drawn inside the area left by the status/navigation bars (the caller applies the insets), so the whole
  * rectangle stays visible. When the bars are hidden the insets are zero and it hugs the screen edge.
@@ -617,14 +605,6 @@ private fun TallyEdgeOverlay(modifier: Modifier, color: Color, flash: Boolean) {
             size = androidx.compose.ui.geometry.Size(size.width - w, size.height - w),
             style = Stroke(width = w),
         )
-    }
-}
-
-@Composable
-private fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label)
-        Switch(checked = checked, onCheckedChange = onChange)
     }
 }
 
