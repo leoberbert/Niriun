@@ -70,6 +70,7 @@ private enum class Section { CAMERA, IMAGE, AUDIO, SCREEN, TALLY, ABOUT }
 private const val PLUGIN_URL = "https://github.com/leoberbert/nirium-obs-plugin"
 private const val PLUGIN_RELEASES_URL = "https://github.com/leoberbert/nirium-obs-plugin/releases/latest"
 private const val APP_URL = "https://github.com/leoberbert/Niriun"
+private const val PRIVACY_URL = "https://leoberbert.github.io/Niriun/PRIVACY"
 private const val OBS_URL = "https://obsproject.com/download"
 
 /**
@@ -264,6 +265,9 @@ fun SettingsSheet(
                                     }
                                     TextButton(onClick = { openUrl(context, APP_URL) }, modifier = Modifier.fillMaxWidth()) {
                                         Text(stringResource(R.string.settings_about_source))
+                                    }
+                                    TextButton(onClick = { openUrl(context, PRIVACY_URL) }, modifier = Modifier.fillMaxWidth()) {
+                                        Text(stringResource(R.string.settings_about_privacy))
                                     }
                                     TextButton(onClick = onSupport, modifier = Modifier.fillMaxWidth()) {
                                         Text(stringResource(R.string.settings_support_button))

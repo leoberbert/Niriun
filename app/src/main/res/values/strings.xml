@@ -83,6 +83,7 @@
     <string name="settings_about_text">Niriun turns this phone into a wireless camera for OBS Studio. Independent project, not affiliated with Iriun. Apache-2.0.</string>
     <string name="settings_about_plugin">Niriun OBS plugin (GitHub)</string>
     <string name="settings_about_source">App source code (GitHub)</string>
+    <string name="settings_about_privacy">Privacy policy</string>
     <string name="settings_more_options">More options ↓</string>
     <string name="settings_back_to_top">Back to top ↑</string>
     <string name="settings_close">Close</string>

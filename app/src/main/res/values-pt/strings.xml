@@ -83,6 +83,7 @@
     <string name="settings_about_text">O Niriun transforma este celular em câmera sem fio para o OBS Studio. Projeto independente, sem vínculo com o Iriun. Apache-2.0.</string>
     <string name="settings_about_plugin">Plugin Niriun para OBS (GitHub)</string>
     <string name="settings_about_source">Código-fonte do app (GitHub)</string>
+    <string name="settings_about_privacy">Política de privacidade</string>
     <string name="settings_more_options">Mais opções ↓</string>
     <string name="settings_back_to_top">Voltar ao topo ↑</string>
     <string name="settings_close">Fechar</string>
