@@ -98,6 +98,9 @@ private enum class Tool { NONE, ZOOM, DETAILS }
 private const val LOCAL_NETWORK_PERMISSION = "android.permission.ACCESS_LOCAL_NETWORK"
 private const val LOCAL_NETWORK_API = 37
 
+/** Zoom ratio that the 0-100 % pinch scale spans (1x to 10x). */
+private const val PINCH_RANGE = 10.0
+
 @Composable
 fun MainScreen() {
     val context = LocalContext.current
@@ -253,7 +256,10 @@ private fun LiveScreen(permissionsReady: Boolean, onRequestPermissions: () -> Un
                         .pointerInput(Unit) {
                             detectTransformGestures { _, _, scale, _ ->
                                 if (scale != 1f) {
-                                    zoom = (zoom + (scale - 1f) * 100f).coerceIn(0f, 100f)
+                                    // Multiplicative like DroidNDI: the same finger spread gives the same zoom ratio at any level.
+                                    // The 0-100 % scale is logarithmic between 1x and 10x.
+                                    val factor = Math.pow(PINCH_RANGE, zoom / 100.0) * scale
+                                    zoom = (Math.log(factor) / Math.log(PINCH_RANGE) * 100.0).toFloat().coerceIn(0f, 100f)
                                     NiriunRuntime.setZoom(zoom.toInt())
                                     expanded = true
                                     tool = Tool.ZOOM

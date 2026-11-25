@@ -9,6 +9,21 @@ O protocolo, com o endereço de cada evidência na `libnative-lib.so`, está em
 [`docs/PROTOCOL.md`](docs/PROTOCOL.md). O método da análise está em [`docs/ANALYSIS.md`](docs/ANALYSIS.md).
 Nenhum código ou asset do Iriun foi copiado: tudo aqui foi escrito do zero a partir do comportamento observado.
 
+## Plugin necessário para o OBS
+
+O Niriun **só envia** a imagem. Para usá-la no OBS Studio é preciso instalar o
+[**plugin Niriun para OBS**](https://github.com/leoberbert/nirium-obs-plugin) no computador (Windows, OBS 32.x). Ele recebe o
+vídeo e o áudio, cria a fonte "Niriun" no OBS e devolve o **tally** ao celular. Não é preciso mais nada no computador: nem o
+cliente do Iriun Webcam, nem driver de câmera virtual, nem o OBS WebSocket.
+
+1. Baixe o instalador `niriun-obs-<versão>-windows-x64-setup.exe` (ou o `.zip` portátil) na
+   [página de releases do plugin](https://github.com/leoberbert/nirium-obs-plugin/releases/latest) e instale com o OBS fechado.
+2. No celular, abra o Niriun e toque em **Iniciar**.
+3. No OBS: **Fontes → + → Niriun**, escolha o celular em **Dispositivo** e clique em **Ativar**.
+
+Sem o plugin o celular transmite, mas nada recebe o vídeo no OBS e o tally fica desligado (o cliente oficial do Iriun ainda
+recebe o vídeo, sem tally). O passo a passo completo, as opções da fonte e a solução de problemas estão no README do plugin.
+
 ## O que faz
 
 | Área | Implementação |
@@ -21,7 +36,7 @@ Nenhum código ou asset do Iriun foi copiado: tudo aqui foi escrito do zero a pa
 | Controles | zoom, lanterna, espelho, EV, balanço de branco, ISO/tempo de exposição, travar AE/AWB, foco manual, toque para focar, trocar câmera |
 | Tally | Vem do plugin Niriun para OBS Studio, em banda, pelo canal de controle (mensagem `0x30`, §4.5 do protocolo; sem WebSocket): borda magenta ao vivo, âmbar no preview, com o nome da fonte; confirmação dupla ao parar (ou mudar a imagem) com a fonte ao vivo |
 | Senha | não implementada: o desafio `0x17` do Iriun (§4.4 do protocolo) foi removido do app |
-| UI | Compose: prévia em tela cheia, status, borda de tally, painel de câmeras e detalhes |
+| UI | Compose, no mesmo layout do DroidNDI em roxo: prévia em tela cheia, barra superior (status, relógio, detalhes, apoio), painel inferior, Configurações em painel com seções (câmera, tally, sobre) e janela de apoio via Pix |
 
 Pacotes: `protocol/` (puro Kotlin, testável na JVM), `net/` (sockets e descoberta), `stream/` (câmera, GL, codecs,
 sessão, serviço em primeiro plano), `ui/`.
