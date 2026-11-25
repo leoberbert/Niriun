@@ -495,7 +495,7 @@ private fun Header(
     }
     val subtitle = listOfNotNull(
         onAir?.let { stringResource(R.string.tally_on_air_for, it) },
-        live,
+        live.takeIf { onAir == null },  // the on-air clock already says how long this has been running
         base.ifEmpty { null },
     ).joinToString(" · ")
     Surface(modifier, shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainer) {
