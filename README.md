@@ -14,7 +14,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Android-10%2B-3DDC84?style=flat-square&logo=android&logoColor=white" alt="Android">
   <img src="https://img.shields.io/badge/Kotlin-Compose-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin">
-  <img src="https://img.shields.io/badge/OBS%20Studio-32.x-302E31?style=flat-square&logo=obsstudio&logoColor=white" alt="OBS Studio">
+  <img src="https://img.shields.io/badge/OBS%20Studio-32%2B-302E31?style=flat-square&logo=obsstudio&logoColor=white" alt="OBS Studio">
   <img src="https://img.shields.io/github/stars/leoberbert/Niriun?style=flat-square&logo=github" alt="Stars">
   <img src="https://img.shields.io/github/issues/leoberbert/Niriun?style=flat-square" alt="Issues">
 </p>
@@ -53,7 +53,7 @@
 ## 🧩 Plugin necessário para o OBS
 
 O Niriun **só envia** a imagem. Para usá-la no OBS Studio é preciso instalar o
-[**plugin Niriun para OBS**](https://github.com/leoberbert/nirium-obs-plugin) no computador (Windows, OBS 32.x). Ele recebe o
+[**plugin Niriun para OBS**](https://github.com/leoberbert/nirium-obs-plugin) no computador (Windows, OBS 32 ou superior). Ele recebe o
 vídeo e o áudio, cria a fonte "Niriun" no OBS e devolve o **tally** ao celular. Não é preciso mais nada no computador: nem o
 cliente do Iriun Webcam, nem driver de câmera virtual, nem o OBS WebSocket.
 
@@ -201,7 +201,7 @@ ffprobe -count_frames -select_streams v:0 out.h264
 
 - O vídeo chega ao OBS pelo plugin Niriun, que fala o mesmo protocolo TCP 4699 como cliente do PC. O cliente oficial do
   Iriun Webcam ainda funciona para o vídeo, mas sem tally.
-- Testado com OBS 32 e um Samsung SM-S938B (Android 17); outros aparelhos e fabricantes ainda não foram testados.
+- Testado com OBS 32 e 33 e um Samsung SM-S938B (Android 17); outros aparelhos e fabricantes ainda não foram testados.
 - O HEVC depende do encoder do celular: alguns (e o emulador) recusam o perfil usado.
 - O tally só existe enquanto um plugin (ou o `pc-sim --tally`) estiver conectado.
 
