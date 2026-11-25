@@ -154,6 +154,7 @@ private fun LiveScreen(permissionsReady: Boolean, onRequestPermissions: () -> Un
     var expanded by remember { mutableStateOf(true) }
     var interaction by remember { mutableLongStateOf(0L) }
     var confirmStop by remember { mutableStateOf(false) }
+    var supportOpen by remember { mutableStateOf(false) }
     var settingsOpen by remember { mutableStateOf(false) }
     var confirmStopAgain by remember { mutableStateOf(false) }
     // Actions that change the picture are held back for confirmation while this phone is ON AIR in OBS.
@@ -299,6 +300,8 @@ private fun LiveScreen(permissionsReady: Boolean, onRequestPermissions: () -> Un
                     live = liveText,
                     modifier = Modifier.align(Alignment.TopCenter).safeDrawingPadding().padding(8.dp).fillMaxWidth(),
                     onDetails = { tool = if (tool == Tool.DETAILS) Tool.NONE else Tool.DETAILS },
+                    // Low-key support entry, like DroidNDI: only while no picture is being sent.
+                    onSupport = if (!streaming) ({ supportOpen = true }) else null,
                     onHide = if (permissionsReady) ({ expanded = false }) else null,
                 )
                 Surface(
@@ -399,7 +402,16 @@ private fun LiveScreen(permissionsReady: Boolean, onRequestPermissions: () -> Un
         SettingsSheet(
             state = state,
             onGuarded = { action -> if (tally == Tally.PROGRAM) guarded = action else action() },
+            onSupport = { settingsOpen = false; supportOpen = true },
             onDismiss = { settingsOpen = false },
+        )
+    }
+    if (supportOpen) {
+        AlertDialog(
+            onDismissRequest = { supportOpen = false },
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            text = { Column(Modifier.verticalScroll(rememberScrollState())) { ContributionContent() } },
+            confirmButton = { TextButton(onClick = { supportOpen = false }) { Text(stringResource(R.string.main_close)) } },
         )
     }
 }
@@ -451,7 +463,16 @@ private fun tallyLabel(tally: Tally, source: String): String =
 private enum class IndicatorShape { FILLED, RING, LINK }
 
 @Composable
-private fun Header(state: UiState, tally: Tally, onAir: String?, live: String?, modifier: Modifier, onDetails: () -> Unit, onHide: (() -> Unit)?) {
+private fun Header(
+    state: UiState,
+    tally: Tally,
+    onAir: String?,
+    live: String?,
+    modifier: Modifier,
+    onDetails: () -> Unit,
+    onSupport: (() -> Unit)?,
+    onHide: (() -> Unit)?,
+) {
     val (label, color, shape) = when {
         tally == Tally.PROGRAM -> Triple(tallyLabel(tally, state.tallySource), StatusColors.program, IndicatorShape.FILLED)
         tally == Tally.PREVIEW -> Triple(tallyLabel(tally, state.tallySource), StatusColors.preview, IndicatorShape.RING)
@@ -499,6 +520,15 @@ private fun Header(state: UiState, tally: Tally, onAir: String?, live: String?, 
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
+                }
+            }
+            if (onSupport != null) {
+                IconButton(onClick = onSupport) {
+                    Icon(
+                        painterResource(R.drawable.ic_favorite_border),
+                        contentDescription = stringResource(R.string.main_support),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
             if (onHide != null) {

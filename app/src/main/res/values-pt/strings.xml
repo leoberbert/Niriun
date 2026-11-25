@@ -90,4 +90,19 @@
     <string name="settings_more_options">Mais opções ↓</string>
     <string name="settings_back_to_top">Voltar ao topo ↑</string>
     <string name="settings_close">Fechar</string>
+    <string name="main_support">Apoiar o Niriun</string>
+    <string name="main_close">Fechar</string>
+    <string name="settings_support_button">Apoiar</string>
+    <string name="settings_support_heading">Ajude o Niriun a evoluir</string>
+    <string name="settings_support_text">Se o aplicativo ajuda nas suas transmissões, você pode contribuir com qualquer valor. O apoio é voluntário e não altera os recursos disponíveis.</string>
+    <string name="settings_support_pix_title">Contribuição via Pix</string>
+    <string name="settings_support_pix_amount">Você escolhe o valor no seu banco.</string>
+    <string name="settings_support_copy_error">Não foi possível copiar. Tente abrir a página do Pix.</string>
+    <string name="settings_support_copied">Código Pix copiado</string>
+    <string name="settings_support_copy">Copiar código Pix</string>
+    <string name="settings_support_after_copy">Agora abra seu banco, escolha Pix Copia e Cola e cole o código. Confira o destinatário e escolha o valor.</string>
+    <string name="settings_support_before_copy">No mesmo celular, copie o código e cole em Pix Copia e Cola no aplicativo do seu banco.</string>
+    <string name="settings_support_open_error">Não foi possível abrir a página. Use Copiar código Pix para contribuir pelo seu banco.</string>
+    <string name="settings_support_open_page">Abrir página do Pix</string>
+    <string name="settings_support_thanks">Obrigado por apoiar o desenvolvimento!</string>
 </resources>

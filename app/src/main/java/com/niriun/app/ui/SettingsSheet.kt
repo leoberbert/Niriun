@@ -69,7 +69,7 @@ private const val APP_URL = "https://github.com/leoberbert/Niriun"
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun SettingsSheet(state: UiState, onGuarded: (() -> Unit) -> Unit, onDismiss: () -> Unit) {
+fun SettingsSheet(state: UiState, onGuarded: (() -> Unit) -> Unit, onSupport: () -> Unit, onDismiss: () -> Unit) {
     var open by rememberSaveable { mutableStateOf(setOf(Section.CAMERA.name)) }
     // Half height keeps the live preview visible; full height for reading.
     var tall by rememberSaveable { mutableStateOf(false) }
@@ -163,6 +163,9 @@ fun SettingsSheet(state: UiState, onGuarded: (() -> Unit) -> Unit, onDismiss: ()
                                 }
                                 TextButton(onClick = { openUrl(context, APP_URL) }, modifier = Modifier.fillMaxWidth()) {
                                     Text(stringResource(R.string.settings_about_source))
+                                }
+                                TextButton(onClick = onSupport, modifier = Modifier.fillMaxWidth()) {
+                                    Text(stringResource(R.string.settings_support_button))
                                 }
                             }
                         }

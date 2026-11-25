@@ -90,4 +90,19 @@
     <string name="settings_more_options">More options ↓</string>
     <string name="settings_back_to_top">Back to top ↑</string>
     <string name="settings_close">Close</string>
+    <string name="main_support">Support Niriun</string>
+    <string name="main_close">Close</string>
+    <string name="settings_support_button">Support</string>
+    <string name="settings_support_heading">Help Niriun evolve</string>
+    <string name="settings_support_text">If the app helps your streams, you can contribute any amount. Support is voluntary and does not change the available features.</string>
+    <string name="settings_support_pix_title">Contribution via Pix</string>
+    <string name="settings_support_pix_amount">You choose the amount in your bank.</string>
+    <string name="settings_support_copy_error">Could not copy. Try opening the Pix page.</string>
+    <string name="settings_support_copied">Pix code copied</string>
+    <string name="settings_support_copy">Copy Pix code</string>
+    <string name="settings_support_after_copy">Now open your bank, choose Pix Copy and Paste and paste the code. Check the recipient and choose the amount.</string>
+    <string name="settings_support_before_copy">On this same phone, copy the code and paste it in Pix Copy and Paste in your bank app.</string>
+    <string name="settings_support_open_error">Could not open the page. Use Copy Pix code to contribute through your bank.</string>
+    <string name="settings_support_open_page">Open Pix page</string>
+    <string name="settings_support_thanks">Thanks for supporting development!</string>
 </resources>
