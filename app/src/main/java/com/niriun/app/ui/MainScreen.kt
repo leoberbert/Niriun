@@ -21,6 +21,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -160,7 +161,7 @@ private fun LiveScreen(permissionsReady: Boolean, onRequestPermissions: () -> Un
     var zoom by remember(state.selectedCamera) { mutableFloatStateOf(0f) }
 
     // Controls fade out while streaming so the picture is clean; tapping brings them back.
-    val showControls = expanded || !streaming
+    val showControls = expanded || !permissionsReady
     LaunchedEffect(streaming, expanded, tool, interaction, settingsOpen) {
         if (streaming && expanded && tool == Tool.NONE && !settingsOpen) {
             delay(5000)
@@ -176,6 +177,25 @@ private fun LiveScreen(permissionsReady: Boolean, onRequestPermissions: () -> Un
     DisposableEffect(view, running) {
         view.keepScreenOn = running
         onDispose { view.keepScreenOn = false }
+    }
+
+    // Time since the picture started flowing, shown in the top bar like DroidNDI's live summary.
+    var liveSince by remember { mutableLongStateOf(0L) }
+    var liveNow by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(streaming) {
+        if (streaming) {
+            liveSince = SystemClock.elapsedRealtime()
+            while (true) {
+                liveNow = SystemClock.elapsedRealtime()
+                delay(1000)
+            }
+        }
+    }
+    val liveText = if (streaming) {
+        val s = ((liveNow - liveSince) / 1000).coerceAtLeast(0)
+        if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%02d:%02d".format(s / 60, s % 60)
+    } else {
+        null
     }
 
     // Tally from the PC (OBS plugin): haptic pulse and a running clock when this phone's source goes to Program.
@@ -225,7 +245,7 @@ private fun LiveScreen(permissionsReady: Boolean, onRequestPermissions: () -> Un
                         .fillMaxSize()
                         .pointerInput(Unit) {
                             detectTapGestures {
-                                expanded = !expanded || !streaming
+                                expanded = true
                                 interaction = android.os.SystemClock.uptimeMillis()
                             }
                         }
@@ -276,9 +296,10 @@ private fun LiveScreen(permissionsReady: Boolean, onRequestPermissions: () -> Un
                     state = state,
                     tally = tally,
                     onAir = onAirText,
+                    live = liveText,
                     modifier = Modifier.align(Alignment.TopCenter).safeDrawingPadding().padding(8.dp).fillMaxWidth(),
                     onDetails = { tool = if (tool == Tool.DETAILS) Tool.NONE else Tool.DETAILS },
-                    onHide = if (streaming) ({ expanded = false }) else null,
+                    onHide = if (permissionsReady) ({ expanded = false }) else null,
                 )
                 Surface(
                     Modifier
@@ -430,7 +451,7 @@ private fun tallyLabel(tally: Tally, source: String): String =
 private enum class IndicatorShape { FILLED, RING, LINK }
 
 @Composable
-private fun Header(state: UiState, tally: Tally, onAir: String?, modifier: Modifier, onDetails: () -> Unit, onHide: (() -> Unit)?) {
+private fun Header(state: UiState, tally: Tally, onAir: String?, live: String?, modifier: Modifier, onDetails: () -> Unit, onHide: (() -> Unit)?) {
     val (label, color, shape) = when {
         tally == Tally.PROGRAM -> Triple(tallyLabel(tally, state.tallySource), StatusColors.program, IndicatorShape.FILLED)
         tally == Tally.PREVIEW -> Triple(tallyLabel(tally, state.tallySource), StatusColors.preview, IndicatorShape.RING)
@@ -446,7 +467,11 @@ private fun Header(state: UiState, tally: Tally, onAir: String?, modifier: Modif
         Phase.CONNECTED -> state.peer.orEmpty()
         else -> state.deviceName
     }
-    val subtitle = listOfNotNull(onAir?.let { stringResource(R.string.tally_on_air_for, it) }, base.ifEmpty { null }).joinToString(" · ")
+    val subtitle = listOfNotNull(
+        onAir?.let { stringResource(R.string.tally_on_air_for, it) },
+        live,
+        base.ifEmpty { null },
+    ).joinToString(" · ")
     Surface(modifier, shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainer) {
         Row(
             Modifier.padding(start = 14.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
@@ -454,7 +479,7 @@ private fun Header(state: UiState, tally: Tally, onAir: String?, modifier: Modif
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Row(
-                Modifier.weight(1f),
+                Modifier.weight(1f).clickable(onClickLabel = stringResource(R.string.details), onClick = onDetails),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
