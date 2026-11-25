@@ -290,7 +290,7 @@ private fun LiveScreen(permissionsReady: Boolean, onRequestPermissions: () -> Un
                             else Modifier.size(12.dp).border(2.5.dp, tallyColor, CircleShape),
                         )
                         Text(
-                            tallyLabel(tally, state.tallySource),
+                            tallyLabel(tally),
                             color = tallyColor,
                             style = MaterialTheme.typography.labelLarge,
                         )
@@ -460,11 +460,10 @@ private fun PermissionPrompt(modifier: Modifier, onRequest: () -> Unit) {
     }
 }
 
-/** "ON AIR" / "PREVIEW", followed by the OBS source name when the plugin reported one. */
+/** "ON AIR" / "PREVIEW". */
 @Composable
-private fun tallyLabel(tally: Tally, source: String): String =
-    if (source.isBlank()) stringResource(if (tally == Tally.PROGRAM) R.string.tally_program else R.string.tally_preview)
-    else stringResource(if (tally == Tally.PROGRAM) R.string.tally_program_named else R.string.tally_preview_named, source)
+private fun tallyLabel(tally: Tally): String =
+    stringResource(if (tally == Tally.PROGRAM) R.string.tally_program else R.string.tally_preview)
 
 private enum class IndicatorShape { FILLED, RING, LINK }
 
@@ -480,8 +479,8 @@ private fun Header(
     onHide: (() -> Unit)?,
 ) {
     val (label, color, shape) = when {
-        tally == Tally.PROGRAM -> Triple(tallyLabel(tally, state.tallySource), StatusColors.program, IndicatorShape.FILLED)
-        tally == Tally.PREVIEW -> Triple(tallyLabel(tally, state.tallySource), StatusColors.preview, IndicatorShape.RING)
+        tally == Tally.PROGRAM -> Triple(tallyLabel(tally), StatusColors.program, IndicatorShape.FILLED)
+        tally == Tally.PREVIEW -> Triple(tallyLabel(tally), StatusColors.preview, IndicatorShape.RING)
         else -> when (state.phase) {
             Phase.STOPPED -> Triple(stringResource(R.string.status_stopped), StatusColors.stopped, IndicatorShape.FILLED)
             Phase.WAITING -> Triple(stringResource(R.string.status_waiting), StatusColors.waiting, IndicatorShape.FILLED)

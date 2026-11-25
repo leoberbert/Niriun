@@ -58,8 +58,6 @@
     <string name="tally_program">AO VIVO</string>
     <string name="tally_preview">PREVIEW</string>
     <string name="tally_on_air_for">No ar há %1$s</string>
-    <string name="tally_program_named">AO VIVO · %1$s</string>
-    <string name="tally_preview_named">PREVIEW · %1$s</string>
     <string name="tally_info">O tally (AO VIVO / PREVIEW) vem do plugin Niriun para OBS Studio.</string>
     <string name="notification_paused">Câmera ligada, sem transmitir</string>
     <string name="live_title">Você está AO VIVO</string>

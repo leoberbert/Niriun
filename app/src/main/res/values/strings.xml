@@ -58,8 +58,6 @@
     <string name="tally_program">ON AIR</string>
     <string name="tally_preview">PREVIEW</string>
     <string name="tally_on_air_for">On air %1$s</string>
-    <string name="tally_program_named">ON AIR · %1$s</string>
-    <string name="tally_preview_named">PREVIEW · %1$s</string>
     <string name="tally_info">Tally (ON AIR / PREVIEW) comes from the Niriun plugin for OBS Studio.</string>
     <string name="notification_paused">Camera on, not broadcasting</string>
     <string name="live_title">You are ON AIR</string>
