@@ -574,9 +574,7 @@ private fun DetailsPanel(state: UiState) {
     if (addresses.isEmpty()) {
         Text(stringResource(R.string.no_network), style = MaterialTheme.typography.bodyMedium)
     } else {
-        addresses.forEach {
-            Text(stringResource(R.string.connect_port, it, Wire.TCP_PORT), fontWeight = FontWeight.SemiBold)
-        }
+        Text(stringResource(R.string.connect_port, firstAddress.orEmpty(), Wire.TCP_PORT), fontWeight = FontWeight.SemiBold)
         TextButton(onClick = {
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             clipboard.setPrimaryClip(ClipData.newPlainText("Niriun", firstAddress))
@@ -638,12 +636,24 @@ private fun ErrorText(text: String) {
     Text(text, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
 }
 
+/**
+ * The address a computer on the same network would use, best first: Wi-Fi, hotspot and Ethernet before anything else.
+ * Cellular interfaces (rmnet*, ccmni*) and the 192.0.0.0/29 range used by the carrier's IPv4 translation (CLAT, e.g.
+ * 192.0.0.8) are not reachable from a computer, so they are left out.
+ */
 private fun localAddresses(): List<String> = runCatching {
+    fun rank(name: String) = when {
+        name.startsWith("wlan") || name.startsWith("swlan") || name.startsWith("ap") -> 0
+        name.startsWith("eth") || name.startsWith("rndis") || name.startsWith("usb") -> 1
+        else -> 2
+    }
     NetworkInterface.getNetworkInterfaces().toList()
-        .filter { it.isUp && !it.isLoopback }
+        .filter { it.isUp && !it.isLoopback && !it.name.startsWith("rmnet") && !it.name.startsWith("ccmni") && !it.name.startsWith("v4-") }
+        .sortedBy { rank(it.name) }
         .flatMap { it.inetAddresses.toList() }
         .filterIsInstance<Inet4Address>()
         .mapNotNull { it.hostAddress }
+        .filterNot { it.startsWith("192.0.0.") }
 }.getOrDefault(emptyList())
 
 private fun startBroadcast(context: Context) {
