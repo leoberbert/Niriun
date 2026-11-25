@@ -50,6 +50,8 @@ object MessageType {
     const val CAMERAS = 0x18
     const val CAMERA_USAGE = 0x1A
     const val FOCUS = 0x19
+    /** Niriun extension (not in the original Iriun protocol): the PC reports whether its source is on program/preview. */
+    const val TALLY = 0x30
 }
 
 /** `id` values of the CONTROL message. */
@@ -163,6 +165,25 @@ data class PeerInfo(val kind: Int, val version: Int) {
         fun parse(p: Packet): PeerInfo? {
             if (p.type != MessageType.PEER_INFO || !p.has(0, 12)) return null
             return PeerInfo(p.u32(4), p.u32(8))
+        }
+    }
+}
+
+enum class Tally { OFF, PREVIEW, PROGRAM }
+
+/**
+ * Type 0x30 (Niriun extension), PC -> phone: [state] word at offset 4 (0 off, 1 preview, 2 program) and an optional
+ * NUL-padded UTF-8 source name at offset 8 (up to [Wire.NAME_FIELD_SIZE] bytes; a bare 8-byte packet has no name).
+ */
+data class TallyMessage(val state: Tally, val source: String) {
+    companion object {
+        fun parse(p: Packet): TallyMessage? {
+            if (p.type != MessageType.TALLY || !p.has(0, 8)) return null
+            val state = Tally.entries.getOrNull(p.u32(4)) ?: return null
+            val available = minOf(Wire.NAME_FIELD_SIZE, p.length - 8)
+            var end = 0
+            while (end < available && p.data[8 + end] != 0.toByte()) end++
+            return TallyMessage(state, String(p.data, 8, end, Charsets.UTF_8))
         }
     }
 }

@@ -2,7 +2,8 @@
 
 App Android (Kotlin) que transforma o celular em webcam de rede, usando o mesmo mecanismo observado no
 Iriun Webcam para Android 2.9.7: descoberta na LAN, servidor TCP na porta **4699**, vídeo H.264/HEVC
-vindo do `MediaCodec`, áudio Opus, ACK por quadro e controles remotos da câmera.
+vindo do `MediaCodec`, áudio Opus, ACK por quadro e controles remotos da câmera. O vídeo, o áudio e o tally chegam
+ao OBS Studio pelo [plugin Niriun](https://github.com/leoberbert/nirium-obs-plugin).
 
 O protocolo, com o endereço de cada evidência na `libnative-lib.so`, está em
 [`docs/PROTOCOL.md`](docs/PROTOCOL.md). O método da análise está em [`docs/ANALYSIS.md`](docs/ANALYSIS.md).
@@ -18,9 +19,9 @@ Nenhum código ou asset do Iriun foi copiado: tudo aqui foi escrito do zero a pa
 | Áudio | `AudioRecord` 48 kHz mono → encoder Opus da plataforma (20 ms) → pacote `0x07` |
 | Fluxo | ACK `0x09` por quadro + limite de quadros em voo no encoder (`FlowControl`, `EncoderBacklog`) |
 | Controles | zoom, lanterna, espelho, EV, balanço de branco, ISO/tempo de exposição, travar AE/AWB, foco manual, toque para focar, trocar câmera |
-| Tally | WebSocket do OBS (porta 4455): borda magenta ao vivo, âmbar no preview, na fonte escolhida; confirmação dupla ao iniciar/parar com a fonte ao vivo; fluxo guiado para escolher ou criar a fonte no OBS |
+| Tally | Vem do plugin Niriun para OBS Studio, em banda, pelo canal de controle (mensagem `0x30`, §4.5 do protocolo; sem WebSocket): borda magenta ao vivo, âmbar no preview, com o nome da fonte; confirmação dupla ao parar (ou mudar a imagem) com a fonte ao vivo |
 | Senha | não implementada: o desafio `0x17` do Iriun (§4.4 do protocolo) foi removido do app |
-| UI | Compose: prévia em tela cheia, status, borda de tally, painel de câmeras, detalhes e OBS |
+| UI | Compose: prévia em tela cheia, status, borda de tally, painel de câmeras e detalhes |
 
 Pacotes: `protocol/` (puro Kotlin, testável na JVM), `net/` (sockets e descoberta), `stream/` (câmera, GL, codecs,
 sessão, serviço em primeiro plano), `ui/`.
@@ -44,6 +45,7 @@ adb forward tcp:4699 tcp:4699
 node tools/pc-sim/pc-sim.js --seconds 10 --size 1280x720 --fps 30 --audio --out out.h264 --verbose
 node tools/pc-sim/pc-sim.js --codec hevc --out out.h265
 node tools/pc-sim/pc-sim.js --control zoom=50,torch,next-camera
+node tools/pc-sim/pc-sim.js --tally program --tally-name "Camera 1"   # envia o tally 0x30 após o START (off|preview|program)
 ffprobe -count_frames -select_streams v:0 out.h264
 ```
 
@@ -58,10 +60,10 @@ ffprobe -count_frames -select_streams v:0 out.h264
 
 ## Limitações conhecidas
 
-* O app só é útil com o cliente do Iriun Webcam instalado no Windows (ele cria a câmera virtual). Testado com o
-  cliente 2.9.9, OBS 32 e um Samsung SM-S938B (Android 17). Outros aparelhos e fabricantes ainda não foram testados.
-* O tally depende do OBS WebSocket (porta 4455) e do nome da fonte escolhida; sem conexão, o app não sabe se está ao vivo.
-* O vídeo não passa pelo OBS WebSocket (ele só controla o OBS); a imagem chega ao OBS pela câmera virtual do Iriun.
+* O vídeo chega ao OBS pelo plugin Niriun ([nirium-obs-plugin](https://github.com/leoberbert/nirium-obs-plugin)), que
+  fala o mesmo protocolo TCP 4699 como cliente do PC. O cliente oficial do Iriun Webcam ainda funciona para o vídeo,
+  mas sem tally. Testado com OBS 32 e um Samsung SM-S938B (Android 17); outros aparelhos e fabricantes ainda não foram testados.
+* O tally só existe enquanto um plugin (ou o `pc-sim --tally`) estiver conectado; sem PC, o app não sabe se está ao vivo e mostra desligado.
 
 ## Releases
 

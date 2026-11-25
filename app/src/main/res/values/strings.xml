@@ -16,12 +16,12 @@
 
     <string name="welcome_title">Your phone as a wireless webcam</string>
     <string name="welcome_subtitle">Send camera and microphone to your computer over Wi-Fi or USB tethering. No account, no cloud.</string>
-    <string name="welcome_step1_title">Open the computer app</string>
-    <string name="welcome_step1_detail">Run the Iriun Webcam desktop app on the same Wi-Fi network as this phone.</string>
-    <string name="welcome_step2_title">Pick this phone</string>
-    <string name="welcome_step2_detail">It shows up automatically. If not, type the address shown in Details.</string>
-    <string name="welcome_step3_title">Use it as a camera</string>
-    <string name="welcome_step3_detail">Choose it in your video-call or recording app. The picture follows how you hold the phone.</string>
+    <string name="welcome_step1_title">Install the OBS plugin</string>
+    <string name="welcome_step1_detail">Install the Niriun plugin in OBS Studio: github.com/leoberbert/nirium-obs-plugin</string>
+    <string name="welcome_step2_title">Add the source and pick this phone</string>
+    <string name="welcome_step2_detail">In OBS, add a \"Niriun\" source and pick this phone. It shows up automatically on the same Wi-Fi; if not, type the address shown in Details.</string>
+    <string name="welcome_step3_title">Watch the tally</string>
+    <string name="welcome_step3_detail">The camera border lights up magenta when the source is on air and amber in preview.</string>
     <string name="welcome_privacy">Video and audio only travel to computers on your local network.</string>
     <string name="welcome_allow_and_start">Allow and start</string>
 
@@ -58,33 +58,10 @@
     <string name="tally_program">ON AIR</string>
     <string name="tally_preview">PREVIEW</string>
     <string name="tally_on_air_for">On air %1$s</string>
-    <string name="obs_title">OBS tally</string>
-    <string name="obs_host">Computer address (IP)</string>
-    <string name="obs_port">Port</string>
-    <string name="obs_password">Password</string>
-    <string name="obs_connecting">Connecting to OBS…</string>
-    <string name="obs_connected">Connected to OBS</string>
-    <string name="obs_unreachable">Cannot reach OBS</string>
-    <string name="obs_source_missing">No source named \"%1$s\" in OBS. Pick one from the list.</string>
-    <string name="obs_edit">Edit</string>
-    <string name="save">Save</string>
+    <string name="tally_program_named">ON AIR · %1$s</string>
+    <string name="tally_preview_named">PREVIEW · %1$s</string>
+    <string name="tally_info">Tally (ON AIR / PREVIEW) comes from the Niriun plugin for OBS Studio.</string>
     <string name="notification_paused">Camera on, not broadcasting</string>
-    <string name="obs_intro">Optional. Shows on the phone when this camera is on air or in preview in OBS.</string>
-    <string name="obs_step_enable">In OBS: Tools, WebSocket Server Settings, turn on the server. Then enter this computer\'s address.</string>
-    <string name="obs_connect">Connect</string>
-    <string name="obs_disconnect">Disconnect</string>
-    <string name="obs_change_source">Change source</string>
-    <string name="obs_source_label">Source: %1$s</string>
-    <string name="obs_choose_source">Which OBS source carries this phone\'s camera?</string>
-    <string name="obs_no_sources">No camera source found in OBS yet.</string>
-    <string name="obs_not_listed">Not in the list?</string>
-    <string name="obs_create">Create source in OBS</string>
-    <string name="obs_creating">Creating…</string>
-    <string name="obs_created_manual">Source \"%1$s\" created. In OBS, open its properties and choose the Iriun Webcam device.</string>
-    <string name="obs_create_failed">Could not create it: %1$s</string>
-    <string name="obs_manual_toggle">How to create it by hand</string>
-    <string name="obs_manual_steps">1. In OBS, select the scene you want.\n2. Under Sources press +, choose Video Capture Device.\n3. In Device pick Iriun Webcam, then OK.\n4. Come back here and choose the new source.</string>
-    <string name="obs_use_password">OBS uses a password</string>
     <string name="live_title">You are ON AIR</string>
     <string name="live_continue">Continue</string>
     <string name="live_stop_text">OBS is showing this phone on the program right now. Stopping removes the camera from the live output.</string>
@@ -92,9 +69,6 @@
     <string name="live_sure_text">The audience will lose the picture immediately. Only stop if you are certain.</string>
     <string name="live_stop_anyway">Stop anyway</string>
     <string name="live_action_text">This changes what viewers are seeing right now.</string>
-    <string name="live_start_text">This OBS source is already ON AIR. Starting now puts the phone camera on the live output.</string>
-    <string name="live_start_sure_text">Viewers will see the camera the moment it starts. Be sure this is what you want.</string>
-    <string name="live_start_anyway">Start anyway</string>
     <string name="pc_camera_in_use">Computer: an app is using the camera</string>
     <string name="pc_camera_idle">Computer: no app is using the camera</string>
 </resources>

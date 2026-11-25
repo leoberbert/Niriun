@@ -22,10 +22,9 @@ data class UiState(
     val fps: Float = 0f,
     val kbps: Int = 0,
     val error: String? = null,
-    val obs: com.niriun.app.obs.ObsState = com.niriun.app.obs.ObsState(),
-    /** Saved OBS settings, mirrored here so the UI recomposes when they change. */
-    val obsHost: String = "",
-    val obsSource: String = "",
+    /** Tally reported by the PC over the control channel (message 0x30); OFF whenever no PC is connected. */
+    val tally: com.niriun.app.protocol.Tally = com.niriun.app.protocol.Tally.OFF,
+    val tallySource: String = "",
     /** PC report (message 0x1A): is an application reading the virtual camera? null until the PC says. */
     val pcCameraInUse: Boolean? = null,
 )
@@ -68,23 +67,5 @@ object NiriunRuntime {
     /** Turns discovery/serving on or off while the camera preview stays available. */
     fun setBroadcasting(enabled: Boolean) {
         service?.setBroadcasting(enabled)
-    }
-
-    /** Re-reads the OBS settings (host, port, password, source) and reconnects. */
-    fun reloadObs() {
-        service?.reloadObs()
-    }
-
-    fun selectObsSource(name: String) {
-        service?.selectObsSource(name)
-    }
-
-    fun createObsSource() {
-        service?.createObsSource()
-    }
-
-    /** Forgets the OBS connection (address and source). */
-    fun forgetObs() {
-        service?.forgetObs()
     }
 }

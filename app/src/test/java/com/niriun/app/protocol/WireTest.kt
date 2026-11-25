@@ -168,4 +168,53 @@ class WireTest {
         assertNull(StartRequest.parse(packet(MessageType.START, { it.putInt(1) }, 8)))
         assertNull(Control.parse(packet(MessageType.CONTROL, { it.putInt(1) }, 8)))
     }
+
+    private fun tallyPacket(state: Int, name: ByteArray?, fieldSize: Int = Wire.NAME_FIELD_SIZE): Packet {
+        val size = if (name == null) 8 else 8 + fieldSize
+        return packet(MessageType.TALLY, { b ->
+            b.putInt(state)
+            if (name != null) b.put(name, 0, minOf(name.size, fieldSize))
+        }, size)
+    }
+
+    @Test
+    fun tallyMessageCarriesStateAndSourceName() {
+        val t = TallyMessage.parse(tallyPacket(2, "Camera 1".toByteArray()))!!
+        assertEquals(Tally.PROGRAM, t.state)
+        assertEquals("Camera 1", t.source)
+        assertEquals(Tally.PREVIEW, TallyMessage.parse(tallyPacket(1, ByteArray(0)))!!.state)
+        assertEquals(Tally.OFF, TallyMessage.parse(tallyPacket(0, ByteArray(0)))!!.state)
+    }
+
+    @Test
+    fun tallyMessageWithoutNameIsAccepted() {
+        val t = TallyMessage.parse(tallyPacket(1, null))!!
+        assertEquals(Tally.PREVIEW, t.state)
+        assertEquals("", t.source)
+    }
+
+    @Test
+    fun tallyNameFillingTheWholeFieldNeedsNoTerminator() {
+        val name = "x".repeat(Wire.NAME_FIELD_SIZE)
+        assertEquals(name, TallyMessage.parse(tallyPacket(2, name.toByteArray()))!!.source)
+    }
+
+    @Test
+    fun tallyRejectsUnknownStateAndTruncatedPackets() {
+        assertNull(TallyMessage.parse(tallyPacket(3, null)))
+        assertNull(TallyMessage.parse(tallyPacket(-1, null)))
+        assertNull(TallyMessage.parse(packet(MessageType.TALLY, { }, 4)))
+        assertNull(TallyMessage.parse(packet(MessageType.TALLY, { it.putShort(2) }, 6)))
+        assertNull(TallyMessage.parse(packet(MessageType.PEER_INFO, { it.putInt(2).putInt(0) }, 12)))
+    }
+
+    @Test
+    fun tallyNameWithInvalidUtf8DoesNotThrow() {
+        val odd = byteArrayOf(0xFF.toByte(), 0xC3.toByte(), 'a'.code.toByte())
+        val t = TallyMessage.parse(tallyPacket(2, odd))!!
+        assertEquals(Tally.PROGRAM, t.state)
+        assertTrue(t.source.endsWith("a"))
+        // A field shorter than the 256 B the contract asks for is still read up to the end of the packet.
+        assertEquals("short", TallyMessage.parse(tallyPacket(1, "short".toByteArray(), fieldSize = 5))!!.source)
+    }
 }

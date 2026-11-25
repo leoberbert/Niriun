@@ -5,9 +5,11 @@
 //   node tools/pc-sim/pc-sim.js [--host 127.0.0.1] [--port 4699] [--seconds 10] [--out out.h264]
 //                               [--size 1280x720] [--fps 30] [--codec h264|hevc] [--audio]
 //                               [--passcode secret] [--no-ack] [--control zoom=50,torch,mirror,next-camera]
+//                               [--tally off|preview|program] [--tally-name "text"]
 //
 // It speaks the protocol documented in docs/PROTOCOL.md: reads hello/sizes/cameras, sends peer info and START,
-// acknowledges every video packet and writes the raw elementary stream to --out.
+// acknowledges every video packet and writes the raw elementary stream to --out. With --tally it also sends the
+// Niriun tally message (0x30) right after START, as the OBS plugin does.
 
 const net = require('net');
 const fs = require('fs');
@@ -27,8 +29,14 @@ const fps = Number(args.fps || 30);
 const codec = args.codec === 'hevc' ? 2 : 1;
 const wantAudio = Boolean(args.audio);
 const noAck = Boolean(args['no-ack']);
+const tallyState = args.tally === undefined ? null : ['off', 'preview', 'program'].indexOf(String(args.tally));
+if (tallyState === -1) {
+  console.error('--tally must be off, preview or program');
+  process.exit(2);
+}
+const tallyName = typeof args['tally-name'] === 'string' ? args['tally-name'] : '';
 
-const T = { HELLO: 1, SYNC: 4, AUDIO: 7, VIDEO: 8, ACK: 9, SIZES: 0x0a, START: 0x0b, CONTROL: 0x10, PEER: 0x11, AUTH: 0x17, CAMERAS: 0x18 };
+const T = { HELLO: 1, SYNC: 4, AUDIO: 7, VIDEO: 8, ACK: 9, SIZES: 0x0a, START: 0x0b, CONTROL: 0x10, PEER: 0x11, AUTH: 0x17, CAMERAS: 0x18, TALLY: 0x30 };
 
 function header(type, total) {
   const b = Buffer.alloc(4);
@@ -74,6 +82,14 @@ function sendStart() {
   body.writeUInt32LE(h, 12);
   body.writeFloatLE(fps, 16);
   sock.write(packet(T.START, body));
+  if (tallyState !== null) {
+    // Niriun extension (0x30): state word + 256-byte NUL-padded source name.
+    const tally = Buffer.alloc(260);
+    tally.writeUInt32LE(tallyState, 0);
+    tally.write(tallyName, 4, 255, 'utf8');
+    sock.write(packet(T.TALLY, tally));
+    console.log(`TALLY ${args.tally}${tallyName ? ` "${tallyName}"` : ''}`);
+  }
   scheduleControls();
 }
 

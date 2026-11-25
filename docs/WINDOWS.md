@@ -1,5 +1,8 @@
 # Análise do cliente Windows (Iriun Webcam 2.9.9)
 
+> Este documento descreve o cliente oficial do Iriun, para fins de interoperabilidade. O Niriun agora tem seu próprio
+> plugin para OBS Studio ([nirium-obs-plugin](https://github.com/leoberbert/nirium-obs-plugin)), que o substitui.
+
 Alvo: `C:\Program Files (x86)\Iriun Webcam` (instalado a partir de `IriunWebcam-2.9.9.exe`). Método: extração do bundle
 .NET, decompilação da UI (ILSpy 9.1), Ghidra 12.1.4 em `engine.dll` e observação passiva do processo (`netstat`, `reg`,
 `pnputil`). Os endereços abaixo são da imagem x86 de `engine.dll` (base `0x10000000`). Nenhum código do Iriun é copiado.

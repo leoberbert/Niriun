@@ -98,21 +98,6 @@ class StreamService : Service() {
         session?.setZoom(percent)
     }
 
-    fun reloadObs() {
-        session?.reloadObs()
-    }
-
-    fun selectObsSource(name: String) {
-        session?.selectObsSource(name)
-    }
-
-    fun createObsSource() {
-        session?.createObsSource()
-    }
-
-    fun forgetObs() {
-        session?.forgetObs()
-    }
     fun setBroadcasting(enabled: Boolean) {
         session?.setBroadcasting(enabled)
     }

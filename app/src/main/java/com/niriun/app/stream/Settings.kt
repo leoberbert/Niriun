@@ -19,30 +19,7 @@ class Settings(context: Context) {
         get() = prefs.getBoolean(KEY_WELCOME, false)
         set(value) = prefs.edit().putBoolean(KEY_WELCOME, value).apply()
 
-
-    var obsHost: String
-        get() = prefs.getString(KEY_OBS_HOST, "") ?: ""
-        set(value) = prefs.edit().putString(KEY_OBS_HOST, value.trim()).apply()
-
-    var obsPort: Int
-        get() = prefs.getInt(KEY_OBS_PORT, 4455)
-        set(value) = prefs.edit().putInt(KEY_OBS_PORT, value).apply()
-
-    /** Stored in plain app-private preferences; it only protects a LAN-only OBS WebSocket. */
-    var obsPassword: String
-        get() = prefs.getString(KEY_OBS_PASSWORD, "") ?: ""
-        set(value) = prefs.edit().putString(KEY_OBS_PASSWORD, value).apply()
-
-    /** Name of the OBS source that carries this phone's video. */
-    var obsSource: String
-        get() = prefs.getString(KEY_OBS_SOURCE, "") ?: ""
-        set(value) = prefs.edit().putString(KEY_OBS_SOURCE, value).apply()
-
     private companion object {
-        const val KEY_OBS_HOST = "obs_host"
-        const val KEY_OBS_PORT = "obs_port"
-        const val KEY_OBS_PASSWORD = "obs_password"
-        const val KEY_OBS_SOURCE = "obs_source"
         const val KEY_CAMERA = "camera_id"
         const val KEY_MIRROR = "mirror"
         const val KEY_WELCOME = "welcome_seen"

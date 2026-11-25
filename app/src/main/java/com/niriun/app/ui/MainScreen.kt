@@ -39,7 +39,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -50,8 +49,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -65,7 +62,6 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -78,8 +74,6 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -89,9 +83,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.niriun.app.R
-import com.niriun.app.obs.CreateResult
-import com.niriun.app.obs.ObsConnection
-import com.niriun.app.obs.Tally
+import com.niriun.app.protocol.Tally
 import com.niriun.app.protocol.Wire
 import com.niriun.app.stream.NiriunRuntime
 import com.niriun.app.stream.Phase
@@ -148,12 +140,12 @@ fun MainScreen() {
             requestPermissions()
         })
     } else {
-        LiveScreen(settings = settings, permissionsReady = ready, onRequestPermissions = requestPermissions)
+        LiveScreen(permissionsReady = ready, onRequestPermissions = requestPermissions)
     }
 }
 
 @Composable
-private fun LiveScreen(settings: Settings, permissionsReady: Boolean, onRequestPermissions: () -> Unit) {
+private fun LiveScreen(permissionsReady: Boolean, onRequestPermissions: () -> Unit) {
     val context = LocalContext.current
     val state by NiriunRuntime.state.collectAsStateWithLifecycle()
     val phase = state.phase
@@ -165,8 +157,6 @@ private fun LiveScreen(settings: Settings, permissionsReady: Boolean, onRequestP
     var interaction by remember { mutableLongStateOf(0L) }
     var confirmStop by remember { mutableStateOf(false) }
     var confirmStopAgain by remember { mutableStateOf(false) }
-    var confirmStart by remember { mutableStateOf(false) }
-    var confirmStartAgain by remember { mutableStateOf(false) }
     // Actions that change the picture are held back for confirmation while this phone is ON AIR in OBS.
     var guarded by remember { mutableStateOf<(() -> Unit)?>(null) }
     var zoom by remember(state.selectedCamera) { mutableFloatStateOf(0f) }
@@ -190,8 +180,8 @@ private fun LiveScreen(settings: Settings, permissionsReady: Boolean, onRequestP
         onDispose { view.keepScreenOn = false }
     }
 
-    // Tally from OBS: haptic pulse and a running clock when this phone's source goes to Program.
-    val tally = state.obs.tally
+    // Tally from the PC (OBS plugin): haptic pulse and a running clock when this phone's source goes to Program.
+    val tally = state.tally
     var nowMs by remember { mutableLongStateOf(0L) }
     var onAirSince by remember { mutableLongStateOf(0L) }
     LaunchedEffect(tally) {
@@ -275,7 +265,7 @@ private fun LiveScreen(settings: Settings, permissionsReady: Boolean, onRequestP
                             else Modifier.size(12.dp).border(2.5.dp, tallyColor, CircleShape),
                         )
                         Text(
-                            stringResource(if (tally == Tally.PROGRAM) R.string.tally_program else R.string.tally_preview),
+                            tallyLabel(tally, state.tallySource),
                             color = tallyColor,
                             style = MaterialTheme.typography.labelLarge,
                         )
@@ -316,7 +306,7 @@ private fun LiveScreen(settings: Settings, permissionsReady: Boolean, onRequestP
                                 interaction = android.os.SystemClock.uptimeMillis()
                             }
                             Tool.DETAILS -> DetailsPanel(state)
-                            Tool.SETTINGS -> SettingsPanel(state, settings) { action ->
+                            Tool.SETTINGS -> SettingsPanel(state) { action ->
                                 if (tally == Tally.PROGRAM) guarded = action else action()
                             }
                             Tool.NONE -> Unit
@@ -334,7 +324,7 @@ private fun LiveScreen(settings: Settings, permissionsReady: Boolean, onRequestP
                             Spacer(Modifier.weight(1f))
                             BroadcastButton(running, enabled = permissionsReady) {
                                 when {
-                    !running -> if (tally == Tally.PROGRAM) confirmStart = true else startBroadcast(context)
+                                    !running -> startBroadcast(context)
                                     streaming || tally == Tally.PROGRAM -> confirmStop = true
                                     else -> NiriunRuntime.setBroadcasting(false)
                                 }
@@ -373,34 +363,6 @@ private fun LiveScreen(settings: Settings, permissionsReady: Boolean, onRequestP
                 }) { Text(stringResource(R.string.live_stop_anyway), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = { TextButton(onClick = { confirmStopAgain = false }) { Text(stringResource(R.string.cancel)) } },
-        )
-    }
-    if (confirmStart) {
-        AlertDialog(
-            onDismissRequest = { confirmStart = false },
-            title = { Text(stringResource(R.string.live_title)) },
-            text = { Text(stringResource(R.string.live_start_text)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    confirmStart = false
-                    confirmStartAgain = true
-                }) { Text(stringResource(R.string.live_continue), color = MaterialTheme.colorScheme.error) }
-            },
-            dismissButton = { TextButton(onClick = { confirmStart = false }) { Text(stringResource(R.string.cancel)) } },
-        )
-    }
-    if (confirmStartAgain) {
-        AlertDialog(
-            onDismissRequest = { confirmStartAgain = false },
-            title = { Text(stringResource(R.string.live_sure_title)) },
-            text = { Text(stringResource(R.string.live_start_sure_text)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    confirmStartAgain = false
-                    startBroadcast(context)
-                }) { Text(stringResource(R.string.live_start_anyway), color = MaterialTheme.colorScheme.error) }
-            },
-            dismissButton = { TextButton(onClick = { confirmStartAgain = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
     guarded?.let { action ->
@@ -457,18 +419,24 @@ private fun PermissionPrompt(modifier: Modifier, onRequest: () -> Unit) {
     }
 }
 
+/** "ON AIR" / "PREVIEW", followed by the OBS source name when the plugin reported one. */
+@Composable
+private fun tallyLabel(tally: Tally, source: String): String =
+    if (source.isBlank()) stringResource(if (tally == Tally.PROGRAM) R.string.tally_program else R.string.tally_preview)
+    else stringResource(if (tally == Tally.PROGRAM) R.string.tally_program_named else R.string.tally_preview_named, source)
+
 private enum class IndicatorShape { FILLED, RING, LINK }
 
 @Composable
 private fun Header(state: UiState, tally: Tally, onAir: String?, modifier: Modifier, onDetails: () -> Unit, onHide: (() -> Unit)?) {
     val (label, color, shape) = when {
-        tally == Tally.PROGRAM -> Triple(R.string.tally_program, StatusColors.program, IndicatorShape.FILLED)
-        tally == Tally.PREVIEW -> Triple(R.string.tally_preview, StatusColors.preview, IndicatorShape.RING)
+        tally == Tally.PROGRAM -> Triple(tallyLabel(tally, state.tallySource), StatusColors.program, IndicatorShape.FILLED)
+        tally == Tally.PREVIEW -> Triple(tallyLabel(tally, state.tallySource), StatusColors.preview, IndicatorShape.RING)
         else -> when (state.phase) {
-            Phase.STOPPED -> Triple(R.string.status_stopped, StatusColors.stopped, IndicatorShape.FILLED)
-            Phase.WAITING -> Triple(R.string.status_waiting, StatusColors.waiting, IndicatorShape.FILLED)
-            Phase.CONNECTED -> Triple(R.string.status_connected, StatusColors.connected, IndicatorShape.LINK)
-            Phase.STREAMING -> Triple(R.string.status_streaming, StatusColors.streaming, IndicatorShape.RING)
+            Phase.STOPPED -> Triple(stringResource(R.string.status_stopped), StatusColors.stopped, IndicatorShape.FILLED)
+            Phase.WAITING -> Triple(stringResource(R.string.status_waiting), StatusColors.waiting, IndicatorShape.FILLED)
+            Phase.CONNECTED -> Triple(stringResource(R.string.status_connected), StatusColors.connected, IndicatorShape.LINK)
+            Phase.STREAMING -> Triple(stringResource(R.string.status_streaming), StatusColors.streaming, IndicatorShape.RING)
         }
     }
     val base = when (state.phase) {
@@ -494,7 +462,7 @@ private fun Header(state: UiState, tally: Tally, onAir: String?, modifier: Modif
                     IndicatorShape.LINK -> Icon(painterResource(R.drawable.ic_link), null, Modifier.size(16.dp), tint = color)
                 }
                 Column {
-                    Text(stringResource(label), color = color, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(label, color = color, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (subtitle.isNotEmpty()) {
                         Text(
                             subtitle,
@@ -599,6 +567,11 @@ private fun DetailsPanel(state: UiState) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
+    Text(
+        stringResource(R.string.tally_info),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
     if (state.phase == Phase.STREAMING) {
         Text(
             stringResource(
@@ -614,7 +587,7 @@ private fun DetailsPanel(state: UiState) {
 }
 
 @Composable
-private fun SettingsPanel(state: UiState, settings: Settings, onGuarded: (() -> Unit) -> Unit) {
+private fun SettingsPanel(state: UiState, onGuarded: (() -> Unit) -> Unit) {
     if (state.cameras.isNotEmpty()) {
         Text(stringResource(R.string.camera_title), style = MaterialTheme.typography.titleSmall)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -624,144 +597,6 @@ private fun SettingsPanel(state: UiState, settings: Settings, onGuarded: (() -> 
         }
         if (state.torchAvailable) SwitchRow(stringResource(R.string.torch), state.torch) { NiriunRuntime.setTorch(it) }
         SwitchRow(stringResource(R.string.mirror), state.mirror) { enabled -> onGuarded { NiriunRuntime.setMirror(enabled) } }
-    }
-    ObsSection(state, settings)
-}
-
-@Composable
-private fun ObsSection(state: UiState, settings: Settings) {
-    val obs = state.obs
-    val configured = state.obsHost.isNotBlank()
-    var host by remember { mutableStateOf(settings.obsHost) }
-    var port by remember { mutableStateOf(settings.obsPort.toString()) }
-    var password by remember { mutableStateOf(settings.obsPassword) }
-    var usePassword by remember { mutableStateOf(settings.obsPassword.isNotEmpty()) }
-    var editingConnection by rememberSaveable { mutableStateOf(false) }
-    var changingSource by rememberSaveable { mutableStateOf(false) }
-    var showManual by rememberSaveable { mutableStateOf(false) }
-
-    Text(stringResource(R.string.obs_title), style = MaterialTheme.typography.titleSmall)
-
-    // Step 1: connect to OBS. The source is only asked for once the connection works.
-    if (!configured || editingConnection) {
-        Text(stringResource(R.string.obs_intro), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(stringResource(R.string.obs_step_enable), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        OutlinedTextField(
-            value = host, onValueChange = { host = it.take(100) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-            label = { Text(stringResource(R.string.obs_host)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-        )
-        OutlinedTextField(
-            value = port, onValueChange = { port = it.filter(Char::isDigit).take(5) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-            label = { Text(stringResource(R.string.obs_port)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        )
-        SwitchRow(stringResource(R.string.obs_use_password), usePassword) { usePassword = it }
-        if (usePassword) {
-            OutlinedTextField(
-                value = password, onValueChange = { password = it.take(100) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.obs_password)) },
-                visualTransformation = PasswordVisualTransformation(),
-            )
-        }
-        if (configured) ObsStatusLine(obs)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Button(
-                enabled = host.isNotBlank(),
-                onClick = {
-                    settings.obsHost = host
-                    settings.obsPort = port.toIntOrNull()?.takeIf { it in 1..65535 } ?: 4455
-                    settings.obsPassword = if (usePassword) password else ""
-                    NiriunRuntime.reloadObs()
-                    editingConnection = false
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = BrandPurple, contentColor = Color.White),
-            ) { Text(stringResource(R.string.obs_connect)) }
-            if (editingConnection) TextButton(onClick = { editingConnection = false }) { Text(stringResource(R.string.cancel)) }
-        }
-        return
-    }
-
-    if (obs.connection != ObsConnection.CONNECTED) {
-        ObsStatusLine(obs)
-        Row {
-            TextButton(onClick = { editingConnection = true }) { Text(stringResource(R.string.obs_edit)) }
-            TextButton(onClick = { NiriunRuntime.forgetObs() }) { Text(stringResource(R.string.obs_disconnect)) }
-        }
-        return
-    }
-
-    // Step 2: pick (or create) the OBS source that carries this phone.
-    val sourceSet = state.obsSource.isNotBlank()
-    val sourceValid = sourceSet && (obs.inputs.isEmpty() || state.obsSource in obs.inputs)
-    val created = obs.createResult as? CreateResult.Created
-    if (sourceValid && !changingSource) {
-        Text(stringResource(R.string.obs_connected), style = MaterialTheme.typography.bodyMedium, color = StatusColors.connected)
-        Text(
-            stringResource(R.string.obs_source_label, state.obsSource),
-            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1, overflow = TextOverflow.Ellipsis,
-        )
-        if (created != null && !created.deviceSet) {
-            Text(stringResource(R.string.obs_created_manual, created.name), style = MaterialTheme.typography.bodySmall, color = StatusColors.waiting)
-        }
-        Row {
-            TextButton(onClick = { changingSource = true }) { Text(stringResource(R.string.obs_change_source)) }
-            TextButton(onClick = { NiriunRuntime.forgetObs() }) { Text(stringResource(R.string.obs_disconnect)) }
-        }
-        return
-    }
-
-    Text(stringResource(R.string.obs_connected), style = MaterialTheme.typography.bodyMedium, color = StatusColors.connected)
-    Text(stringResource(R.string.obs_choose_source), style = MaterialTheme.typography.bodyMedium)
-    if (sourceSet && !sourceValid) {
-        Text(stringResource(R.string.obs_source_missing, state.obsSource), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-    }
-    if (obs.inputs.isEmpty()) {
-        Text(stringResource(R.string.obs_no_sources), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    } else {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            obs.inputs.forEach { name ->
-                FilterChip(
-                    selected = name == state.obsSource,
-                    onClick = {
-                        NiriunRuntime.selectObsSource(name)
-                        changingSource = false
-                    },
-                    label = { Text(name) },
-                )
-            }
-        }
-    }
-    Text(stringResource(R.string.obs_not_listed), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    OutlinedButton(onClick = { NiriunRuntime.createObsSource() }, enabled = !obs.creating) {
-        Text(stringResource(if (obs.creating) R.string.obs_creating else R.string.obs_create))
-    }
-    when (val result = obs.createResult) {
-        is CreateResult.Failed -> Text(stringResource(R.string.obs_create_failed, result.message), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-        is CreateResult.Created -> if (!result.deviceSet) {
-            Text(stringResource(R.string.obs_created_manual, result.name), style = MaterialTheme.typography.bodySmall, color = StatusColors.waiting)
-        }
-        null -> Unit
-    }
-    TextButton(onClick = { showManual = !showManual }) { Text(stringResource(R.string.obs_manual_toggle)) }
-    if (showManual) {
-        Text(stringResource(R.string.obs_manual_steps), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-    Row {
-        if (changingSource) TextButton(onClick = { changingSource = false }) { Text(stringResource(R.string.cancel)) }
-        TextButton(onClick = { NiriunRuntime.forgetObs() }) { Text(stringResource(R.string.obs_disconnect)) }
-    }
-}
-
-@Composable
-private fun ObsStatusLine(obs: com.niriun.app.obs.ObsState) {
-    when (obs.connection) {
-        ObsConnection.OFF -> Unit
-        ObsConnection.CONNECTING -> Text(stringResource(R.string.obs_connecting), style = MaterialTheme.typography.bodySmall)
-        ObsConnection.CONNECTED -> Text(stringResource(R.string.obs_connected), style = MaterialTheme.typography.bodySmall, color = StatusColors.connected)
-        ObsConnection.ERROR -> Text(
-            obs.message ?: stringResource(R.string.obs_unreachable),
-            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error,
-        )
     }
 }
 
