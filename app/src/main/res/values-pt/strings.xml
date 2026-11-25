@@ -36,7 +36,6 @@
     <string name="zoom_hint">Use pinça na imagem ou arraste o controle.</string>
     <string name="zoom_reset">Redefinir</string>
     <string name="fullscreen">Ocultar controles</string>
-    <string name="show_controls">Mostrar controles</string>
 
     <string name="stop_title">Parar a transmissão?</string>
     <string name="stop_text">O computador perde a câmera até você iniciar de novo.</string>
@@ -78,7 +77,6 @@
     <string name="settings_no_cameras">As câmeras aparecem quando um computador se conecta.</string>
     <string name="settings_camera_hint">A câmera e o espelho também mudam o que o computador recebe.</string>
     <string name="settings_section_tally">Tally do OBS</string>
-    <string name="settings_tally_summary">Vem do plugin Niriun</string>
     <string name="settings_tally_hint">Borda rosa: a fonte está no ar. Âmbar: está no preview. Parar no ar pede confirmação duas vezes.</string>
     <string name="settings_section_about">Sobre</string>
     <string name="settings_about_summary">Plugin, código-fonte e licença</string>

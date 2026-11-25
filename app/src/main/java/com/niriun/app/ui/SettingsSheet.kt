@@ -46,6 +46,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -62,7 +63,6 @@ import com.niriun.app.stream.ScreenPower
 import com.niriun.app.stream.StopScreen
 import com.niriun.app.stream.TallyAlert
 import com.niriun.app.stream.UiState
-import java.util.Locale
 import kotlinx.coroutines.launch
 
 private enum class Section { CAMERA, IMAGE, AUDIO, SCREEN, TALLY, ABOUT }
@@ -147,7 +147,7 @@ fun SettingsSheet(
                                 HelpContent()
                             } else {
                                 val context = LocalContext.current
-                                val locale = Locale.getDefault()
+                                val locale = LocalLocale.current.platformLocale
                                 val on = stringResource(R.string.settings_on)
                                 val off = stringResource(R.string.settings_off)
                                 val camera = state.cameras.getOrNull(state.selectedCamera) ?: state.deviceName

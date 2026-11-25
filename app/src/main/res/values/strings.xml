@@ -36,7 +36,6 @@
     <string name="zoom_hint">Pinch the picture or drag the slider.</string>
     <string name="zoom_reset">Reset</string>
     <string name="fullscreen">Hide controls</string>
-    <string name="show_controls">Show controls</string>
 
     <string name="stop_title">Stop broadcasting?</string>
     <string name="stop_text">The computer will lose the camera until you start again.</string>
@@ -78,7 +77,6 @@
     <string name="settings_no_cameras">Cameras show up when a computer connects.</string>
     <string name="settings_camera_hint">The camera and the mirror also change what the computer receives.</string>
     <string name="settings_section_tally">OBS tally</string>
-    <string name="settings_tally_summary">Comes from the Niriun plugin</string>
     <string name="settings_tally_hint">Pink border: the source is on air. Amber: it is in preview. Stopping while on air asks twice.</string>
     <string name="settings_section_about">About</string>
     <string name="settings_about_summary">Plugin, source code and license</string>
