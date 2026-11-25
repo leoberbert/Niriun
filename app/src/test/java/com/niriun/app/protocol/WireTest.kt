@@ -98,6 +98,14 @@ class WireTest {
     }
 
     @Test
+    fun stopScreenCarriesTheModeAfterTheHeader() {
+        val b = le(PacketBuilder.stopScreen(2))
+        assertEquals(PacketBuilder.header(MessageType.STOP_SCREEN, 8), b.getInt(0))
+        assertEquals(2, b.getInt(4))
+        assertEquals(0x31, MessageType.STOP_SCREEN)
+    }
+
+    @Test
     fun audioPacketHasAZeroWordBeforeTheOpusPayload() {
         val payload = byteArrayOf(1, 2, 3)
         val dst = ByteArray(8 + payload.size)

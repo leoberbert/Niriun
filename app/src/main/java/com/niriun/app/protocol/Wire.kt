@@ -52,6 +52,8 @@ object MessageType {
     const val FOCUS = 0x19
     /** Niriun extension (not in the original Iriun protocol): the PC reports whether its source is on program/preview. */
     const val TALLY = 0x30
+    /** Niriun extension (phone -> PC): sent before a deliberate stop; the PC plugin shows a black or "offline" picture. */
+    const val STOP_SCREEN = 0x31
 }
 
 /** `id` values of the CONTROL message. */
@@ -246,6 +248,13 @@ object PacketBuilder {
         b.putInt(names.size)
         b.putInt(selected)
         for (n in names) b.putName(n)
+        return b.array()
+    }
+
+    /** Type 0x31 (Niriun extension, phone -> PC): what to show after this phone stops. 1 = black, 2 = offline card. */
+    fun stopScreen(mode: Int): ByteArray {
+        val b = newPacket(MessageType.STOP_SCREEN, 8)
+        b.putInt(mode)
         return b.array()
     }
 

@@ -94,6 +94,10 @@ class StreamService : Service() {
         session?.setMirror(enabled)
     }
 
+    fun setLook(brightness: Float, contrast: Float, saturation: Float) {
+        session?.setLook(brightness, contrast, saturation)
+    }
+
     fun setZoom(percent: Int) {
         session?.setZoom(percent)
     }

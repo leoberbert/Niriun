@@ -27,6 +27,8 @@ data class UiState(
     val tallySource: String = "",
     /** PC report (message 0x1A): is an application reading the virtual camera? null until the PC says. */
     val pcCameraInUse: Boolean? = null,
+    /** Width/height of the camera picture as the preview draws it; 0 while no camera is open. */
+    val previewAspect: Float = 0f,
 )
 
 /** Process-wide bridge between the foreground service and the UI. */
@@ -58,6 +60,10 @@ object NiriunRuntime {
 
     fun setMirror(enabled: Boolean) {
         service?.setMirror(enabled)
+    }
+
+    fun setLook(brightness: Float, contrast: Float, saturation: Float) {
+        service?.setLook(brightness, contrast, saturation)
     }
 
     fun setZoom(percent: Int) {

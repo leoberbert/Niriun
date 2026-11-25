@@ -58,6 +58,7 @@ class CameraPipeline(
     private var encoderSurface: Surface? = null
     private var displayRotation = 0
     private var mirror = false
+    private var look = Triple(0f, 1f, 1f)
 
     private var zoomPercent = 0
     private var torch = false
@@ -70,6 +71,18 @@ class CameraPipeline(
     private var meteringRect: Rect? = null
 
     val isOpen: Boolean get() = synchronized(lock) { renderer != null }
+
+    /** Width/height of the picture as the preview draws it (upright, display rotation applied); 0 when closed. */
+    val previewAspect: Float
+        get() = synchronized(lock) {
+            val cam = info ?: return 0f
+            val size = bufferSize ?: return 0f
+            if (renderer == null) return 0f
+            val sideways = cam.sensorOrientation % 180 != 0
+            val w = (if (sideways) size.height else size.width).toFloat()
+            val h = (if (sideways) size.width else size.height).toFloat()
+            if (renderRotation() % 180 != 0) h / w else w / h
+        }
 
     /** (Re)opens [camera] when the camera, buffer size or fps differ from the running session. */
     @SuppressLint("MissingPermission")
@@ -104,6 +117,7 @@ class CameraPipeline(
             renderer = gl
             gl.setRotation(renderRotation())
             gl.setMirror(mirror)
+            gl.setLook(look.first, look.second, look.third)
             previewSurface?.let { gl.setPreviewSurface(it) }
             encoderSurface?.let { gl.setEncoderSurface(it) }
             manager.openCamera(camera.id, deviceCallback(gen, surface), handler)
@@ -138,6 +152,11 @@ class CameraPipeline(
     fun setMirror(enabled: Boolean) = synchronized(lock) {
         mirror = enabled
         renderer?.setMirror(enabled)
+    }
+
+    fun setLook(brightness: Float, contrast: Float, saturation: Float) = synchronized(lock) {
+        look = Triple(brightness, contrast, saturation)
+        renderer?.setLook(brightness, contrast, saturation)
     }
 
     // ---- remote controls (docs/PROTOCOL.md §4.3) ----
