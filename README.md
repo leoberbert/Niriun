@@ -53,11 +53,11 @@
 ## 🧩 Plugin necessário para o OBS
 
 O Niriun **só envia** a imagem. Para usá-la no OBS Studio é preciso instalar o
-[**plugin Niriun para OBS**](https://github.com/leoberbert/nirium-obs-plugin) no computador (Windows, OBS 32 ou superior). Ele recebe o
+[**plugin Niriun para OBS**](https://github.com/leoberbert/nirium-obs-plugin) no computador (Windows ou Linux, OBS 32 ou superior). Ele recebe o
 vídeo e o áudio, cria a fonte "Niriun" no OBS e devolve o **tally** ao celular. Não é preciso mais nada no computador: nem o
 cliente do Iriun Webcam, nem driver de câmera virtual, nem o OBS WebSocket.
 
-1. 📥 Baixe o instalador `niriun-obs-<versão>-windows-x64-setup.exe` (ou o `.zip` portátil) na
+1. 📥 Baixe o pacote do seu sistema (Windows: instalador `niriun-obs-<versão>-windows-x64-setup.exe` ou `.zip` portátil; Linux: pacote da versão correspondente) na
    [página de releases do plugin](https://github.com/leoberbert/nirium-obs-plugin/releases/latest) e instale com o OBS fechado.
 2. 📱 No celular, abra o Niriun e toque em **Iniciar**.
 3. 🎬 No OBS: **Fontes → + → Niriun**, escolha o celular em **Dispositivo** e clique em **Ativar**.

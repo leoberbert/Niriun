@@ -145,7 +145,7 @@
     <string name="settings_tally_program_preview">On air and preview</string>
     <string name="help_intro">To use this phone in OBS Studio, do this once on the computer:</string>
     <string name="help_step1_title">OBS Studio 32 or newer</string>
-    <string name="help_step1_detail">Have OBS Studio installed (Windows, version 32 or newer, e.g. 33).</string>
+    <string name="help_step1_detail">Have OBS Studio installed (Windows or Linux, version 32 or newer, e.g. 33).</string>
     <string name="help_step1_action">Download OBS Studio</string>
     <string name="help_step2_title">Niriun plugin</string>
     <string name="help_step2_detail">Download the plugin installer and run it with OBS closed.</string>
