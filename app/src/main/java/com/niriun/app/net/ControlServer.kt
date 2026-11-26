@@ -124,8 +124,11 @@ class ControlServer(
         } catch (_: IOException) {
             // EOF, reset, bad frame or watchdog close: all end the session the same way.
         } finally {
-            synchronized(writeLock) { client = null }
+            // Close first: a writer stuck on this socket holds writeLock, and only the close aborts its write. Taking the
+            // lock first left the phone waiting for the kernel to give up on a dead peer (about a minute), while the
+            // next computer sat in the accept backlog with a connected socket and no hello.
             closeQuietly(sock)
+            synchronized(writeLock) { client = null }
             listener.onDisconnected()
         }
     }

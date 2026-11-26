@@ -29,7 +29,7 @@ class ControlServerTest {
 
     private val id = ByteArray(16) { it.toByte() }
 
-    private fun startServer(idleTimeoutMs: Long = 10_000): ControlServer {
+    private fun startServer(idleTimeoutMs: Long = 10_000, sendStallTimeoutMs: Long = 4_000): ControlServer {
         lateinit var s: ControlServer
         s = ControlServer(
             port = 0,
@@ -53,6 +53,7 @@ class ControlServerTest {
                 }
             },
             idleTimeoutMs = idleTimeoutMs,
+            sendStallTimeoutMs = sendStallTimeoutMs,
         )
         s.start()
         server = s
@@ -161,6 +162,28 @@ class ControlServerTest {
         val second = connect(s)
         expect("connected")
         assertEquals(0x18, second.getInputStream().read()) // low byte of the 0x01000118 hello header
+    }
+
+    @Test
+    fun aPeerThatStopsReadingDoesNotKeepTheNextComputerWaiting() {
+        val s = startServer(sendStallTimeoutMs = 300)
+        val stale = connect(s)
+        expect("connected")
+        // It reads the announcement, then stops reading: the phone's writes fill the socket buffers and block.
+        DataInputStream(stale.getInputStream()).readFully(ByteArray(280 + 24 + 268))
+        val chunk = ByteArray(4 * 1024 * 1024)
+        val writer = Thread { while (s.send(chunk)) Unit }.also { it.isDaemon = true; it.start() }
+
+        // The next computer must be served once the stalled peer is dropped, not after the kernel gives up on it.
+        val next = Socket(InetAddress.getLoopbackAddress(), s.localPort).also { it.soTimeout = 5_000 }
+        try {
+            assertEquals(0x18, next.getInputStream().read()) // low byte of the 0x01000118 hello header
+            writer.join(5_000)
+            assertFalse("the stalled write must be aborted", writer.isAlive)
+        } finally {
+            next.close()
+            stale.close()
+        }
     }
 
     @Test
